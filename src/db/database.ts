@@ -81,7 +81,35 @@ export function indexedDbAdapter(): SnapshotAdapter {
   }
 }
 
+/**
+ * A snapshot can be a perfectly valid SQLite file from an older or foreign
+ * schema. CREATE TABLE IF NOT EXISTS would silently keep the wrong shape and
+ * the first INSERT would then crash the boot forever, so tables that exist
+ * must already carry every column this version needs.
+ */
+const REQUIRED_COLUMNS: Record<string, string[]> = {
+  users: [
+    'id', 'username', 'password_hash', 'salt', 'department',
+    'xp', 'has_seen_onboarding', 'is_demo', 'created_at',
+  ],
+  todos: ['id', 'user_id', 'title', 'completed', 'created_at', 'due_date', 'xp_awarded'],
+}
+
+function assertSchemaCompatible(db: Database): void {
+  for (const [table, columns] of Object.entries(REQUIRED_COLUMNS)) {
+    const result = db.exec(`SELECT name FROM pragma_table_info('${table}')`)
+    if (result.length === 0) continue // absent table: migrate() will create it
+    const present = new Set(result[0].values.flat() as string[])
+    for (const column of columns) {
+      if (!present.has(column)) {
+        throw new Error(`snapshot table ${table} is missing column ${column}`)
+      }
+    }
+  }
+}
+
 function migrate(db: Database): void {
+  db.run('PRAGMA foreign_keys = ON;')
   db.run(`
     CREATE TABLE IF NOT EXISTS meta (
       key TEXT PRIMARY KEY,
@@ -177,18 +205,23 @@ export async function createAppDatabase(options: {
   const SQL = await getSqlJs(wasmBinary)
 
   let snapshot: Uint8Array | null = null
+  let loadThrew = false
   try {
     snapshot = await adapter.load()
   } catch {
+    // Transient read failure: the stored snapshot may still be intact, so it
+    // must not be overwritten by an auto-persisted fresh database below.
     snapshot = null
+    loadThrew = true
   }
 
   let db: Database
-  let loadError = false
+  let loadError = loadThrew
   if (snapshot) {
     try {
       db = new SQL.Database(snapshot)
       db.exec('SELECT count(*) FROM sqlite_master')
+      assertSchemaCompatible(db)
     } catch {
       loadError = true
       db = new SQL.Database()
@@ -197,8 +230,18 @@ export async function createAppDatabase(options: {
     db = new SQL.Database()
   }
 
-  migrate(db)
-  const seeded = await seedIfEmpty(db, now)
+  let seeded: boolean
+  try {
+    migrate(db)
+    seeded = await seedIfEmpty(db, now)
+  } catch {
+    // Last-resort recovery: whatever shape the snapshot had, the app must
+    // still boot. Start over with a fresh, seeded database.
+    loadError = true
+    db = new SQL.Database()
+    migrate(db)
+    seeded = await seedIfEmpty(db, now)
+  }
 
   const adb: AppDatabase = {
     db,
@@ -212,6 +255,6 @@ export async function createAppDatabase(options: {
     close: () => db.close(),
   }
 
-  if (seeded || loadError) await adb.persist()
+  if ((seeded || loadError) && !loadThrew) await adb.persist()
   return { adb, loadError }
 }

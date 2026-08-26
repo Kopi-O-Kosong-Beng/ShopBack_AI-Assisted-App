@@ -1,4 +1,4 @@
-export interface Todo {
+﻿export interface Todo {
   id: string
   title: string
   completed: boolean
@@ -17,8 +17,13 @@ export type TitleValidation =
   | { ok: true; value: string }
   | { ok: false; error: string }
 
+// Zero-width and control characters would pass trim() and create tasks that
+// render as blank rows; newlines and tabs would break the single-line layout.
+// oxlint-disable-next-line no-control-regex -- stripping control chars is the point
+const INVISIBLE_CHARS = /[\u0000-\u001F\u007F\u200B-\u200D\u2060\uFEFF]/g
+
 export function validateTitle(raw: string): TitleValidation {
-  const value = raw.trim()
+  const value = raw.replace(INVISIBLE_CHARS, ' ').replace(/\s+/g, ' ').trim()
   if (value.length === 0) {
     return { ok: false, error: 'Task cannot be empty' }
   }

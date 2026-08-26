@@ -185,10 +185,16 @@ test('E2E-12: onboarding shows once, then reopens from the help button', async (
   await expect(page.getByRole('dialog')).toBeVisible()
 })
 
-test('E2E-13: logging out returns to the login page', async ({ page }) => {
+test('E2E-13: logging out returns to the login page and survives a reload', async ({ page }) => {
   await loginDemo(page)
   await page.getByRole('button', { name: 'Log out' }).click()
   await expect(page.getByRole('button', { name: 'Log in', exact: true })).toBeVisible()
+
+  // The cleared session must stay cleared: a lingering key would silently
+  // log the user back in on the next visit.
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Log in', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Tasks' })).toBeHidden()
 })
 
 test('E2E-14: rejects wrong credentials', async ({ page }) => {

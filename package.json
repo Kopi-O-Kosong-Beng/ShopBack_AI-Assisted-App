@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test e2e/todo.spec.ts",
+    "screenshots": "playwright test e2e/screenshots.spec.ts --workers=1"
   },
   "dependencies": {
     "firebase": "^12.18.0",

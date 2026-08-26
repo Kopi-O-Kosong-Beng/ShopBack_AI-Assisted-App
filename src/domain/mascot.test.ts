@@ -55,6 +55,15 @@ describe('cortisolLevel', () => {
     const many = Array.from({ length: 30 }, () => make({ dueDate: NOW - 2 * DAY }))
     expect(cortisolLevel(many, NOW)).toBe(100)
   })
+
+  it('computes the arithmetic exactly at and just below saturation', () => {
+    const overdue = () => make({ dueDate: NOW - 2 * DAY })
+    // 4 overdue: 4*8 + 4*12 = 80. 5 overdue: 5*8 + 5*12 = 100 exactly.
+    expect(cortisolLevel([overdue(), overdue(), overdue(), overdue()], NOW)).toBe(80)
+    expect(
+      cortisolLevel([overdue(), overdue(), overdue(), overdue(), overdue()], NOW),
+    ).toBe(100)
+  })
 })
 
 describe('moodForCortisol', () => {

@@ -56,6 +56,15 @@ describe('validateTitle', () => {
     const result = validateTitle(`  ${'a'.repeat(MAX_TITLE_LENGTH)}  `)
     expect(result.ok).toBe(true)
   })
+
+  it('rejects titles made only of zero-width or control characters', () => {
+    expect(validateTitle('​​').ok).toBe(false)
+    expect(validateTitle('﻿').ok).toBe(false)
+  })
+
+  it('flattens newlines and tabs into single spaces', () => {
+    expect(validateTitle('buy\nmilk\ttoday')).toEqual({ ok: true, value: 'buy milk today' })
+  })
 })
 
 describe('createTodo', () => {

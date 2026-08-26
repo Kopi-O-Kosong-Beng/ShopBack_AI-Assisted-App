@@ -14,4 +14,4 @@ The judgment calls. I chose the scope, the stack, and what "done" means. When we
 
 ## What would I do differently with more time?
 
-Put the database behind a real backend (Firestore with Google sign-in is already scoped, blocked only on an OAuth console step) so accounts work across devices and XP is validated server-side. Add CI so the 200+ tests run on every push. Enforce stricter red-green TDD on the UI layer, where some tests were written first but I did not always watch them fail before implementing. And run a proper accessibility pass.
+Put the database behind a real backend (Firestore is already provisioned, and the repository layer is the only seam that changes) so accounts work across devices and XP is validated server-side. Add CI so the 220+ tests run on every push. Enforce stricter red-green TDD on the UI layer, where some tests were written first but I did not always watch them fail before implementing. And run a proper accessibility pass.

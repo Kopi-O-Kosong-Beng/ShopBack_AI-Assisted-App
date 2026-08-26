@@ -59,4 +59,35 @@ describe('createAppDatabase', () => {
     expect(loadError).toBe(true)
     expect(listLeaderboard(adb.db).length).toBe(8)
   })
+
+  it('recovers when the snapshot is valid SQLite with an incompatible schema', async () => {
+    // A snapshot from a hypothetical old version whose users table lacks
+    // password_hash. CREATE TABLE IF NOT EXISTS would no-op over it, and
+    // seeding would then crash the boot forever.
+    const first = await make()
+    first.adb.db.run('DROP TABLE todos; DROP TABLE users; DROP TABLE meta;')
+    first.adb.db.run('CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT, created_at INTEGER)')
+    const adapter = memoryAdapter(first.adb.db.export())
+
+    const second = await make(adapter)
+    expect(second.loadError).toBe(true)
+    expect(listLeaderboard(second.adb.db).length).toBe(8)
+  })
+
+  it('flags the failure and does not overwrite the snapshot when reading it throws', async () => {
+    let saves = 0
+    const adapter = {
+      load: async (): Promise<Uint8Array | null> => {
+        throw new Error('transient IndexedDB failure')
+      },
+      save: async () => {
+        saves++
+      },
+    }
+    const { loadError } = await make(adapter)
+    // The user must see a notice, and their real snapshot must not be
+    // clobbered by an auto-persisted fresh database.
+    expect(loadError).toBe(true)
+    expect(saves).toBe(0)
+  })
 })

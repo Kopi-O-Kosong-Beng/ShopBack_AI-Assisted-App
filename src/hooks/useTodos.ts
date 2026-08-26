@@ -27,10 +27,13 @@ export function useTodos(
   const [todos, setTodos] = useState<Todo[]>(() => listByUser(adb.db, userId))
   const [filter, setFilter] = useState<Filter>('all')
 
-  const reload = useCallback(
-    () => setTodos(listByUser(adb.db, userId)),
-    [adb, userId],
-  )
+  const reload = useCallback(() => {
+    const next = listByUser(adb.db, userId)
+    setTodos(next)
+    // An empty list on the Active or Completed filter would strand the user:
+    // the filter bar disappears with it, and newly added tasks stay invisible.
+    if (next.length === 0) setFilter('all')
+  }, [adb, userId])
 
   const addTask = useCallback(
     async (title: string, dueDate: number | null): Promise<string | null> => {

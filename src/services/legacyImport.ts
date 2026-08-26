@@ -1,5 +1,5 @@
 import type { Database } from 'sql.js'
-import type { Todo } from '../domain/todo'
+import { validateTitle, type Todo } from '../domain/todo'
 import { insert } from '../storage/todoSqlRepository'
 
 /** The v1 app stored todos as a JSON array under this localStorage key. */
@@ -60,12 +60,20 @@ export function importLegacyTodos(
   let imported = 0
   for (const item of parsed) {
     if (!isValidLegacyItem(item)) continue
+    // Titles and due dates go through the same rules as fresh input: a blank
+    // title or a non-numeric due date must not sneak into the database.
+    const title = validateTitle(item.title)
+    if (!title.ok) continue
+    const dueDate =
+      typeof item.dueDate === 'number' && Number.isFinite(item.dueDate)
+        ? item.dueDate
+        : null
     const todo: Todo = {
       id: item.id,
-      title: item.title,
+      title: title.value,
       completed: item.completed,
       createdAt: item.createdAt,
-      dueDate: item.dueDate ?? null,
+      dueDate,
       xpAwarded: item.xpAwarded ?? item.completed,
     }
     try {

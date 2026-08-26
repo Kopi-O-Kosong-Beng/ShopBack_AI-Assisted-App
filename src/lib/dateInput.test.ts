@@ -13,6 +13,13 @@ describe('parseDueInput', () => {
       2026, 7, 26, 0,
     ])
   })
+
+  it.each(['abc', '2026-08', '26/08/2026', '2026-8-26x', 'NaN'])(
+    'returns null, never NaN, for malformed input %j',
+    (value) => {
+      expect(parseDueInput(value)).toBeNull()
+    },
+  )
 })
 
 describe('toDateInputValue', () => {

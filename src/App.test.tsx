@@ -356,4 +356,78 @@ describe('corrupted snapshot (UC-05)', () => {
     expect(screen.getByText(/could not be read/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^log in$/i })).toBeInTheDocument()
   })
+
+  it('shows the boot error screen when the database cannot start at all', async () => {
+    render(<App createDatabase={() => Promise.reject(new Error('wasm fetch failed'))} />)
+    expect(
+      await screen.findByText(/database could not be started/i),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('level up (UC-10)', () => {
+  it('crossing 50 XP changes the level title and resets the progress caption', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await loginAsDemo(user)
+    // Demo starts at 45 XP as a Window Shopper.
+    expect(screen.getAllByText(/window shopper/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/45\/50 xp to level 2/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: /plan team lunch/i }))
+    await screen.findByText('+10 XP')
+
+    expect(screen.getAllByText(/deal hunter/i).length).toBeGreaterThan(0)
+    expect(screen.queryAllByText(/window shopper/i)).toHaveLength(0)
+    expect(screen.getByText(/5\/50 xp to level 3/i)).toBeInTheDocument()
+  })
+})
+
+describe('keyboard editing (UC-02)', () => {
+  it('saves an inline edit with Enter', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await signupFresh(user, 'keyboard1')
+    await skipTourIfShown(user)
+    await addTask(user, 'Key task')
+    await user.click(screen.getByRole('button', { name: /edit "key task"/i }))
+    const editBox = screen.getByRole('textbox', { name: /edit task/i })
+    await user.clear(editBox)
+    await user.type(editBox, 'Saved by Enter{Enter}')
+    expect(await screen.findByText('Saved by Enter')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /edit task/i })).not.toBeInTheDocument()
+  })
+
+  it('cancels an inline edit with Escape, keeping the original title', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await signupFresh(user, 'keyboard2')
+    await skipTourIfShown(user)
+    await addTask(user, 'Untouched')
+    await user.click(screen.getByRole('button', { name: /edit "untouched"/i }))
+    const editBox = screen.getByRole('textbox', { name: /edit task/i })
+    await user.clear(editBox)
+    await user.type(editBox, 'Discarded draft{Escape}')
+    expect(screen.getByText('Untouched')).toBeInTheDocument()
+    expect(screen.queryByText('Discarded draft')).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /edit task/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('filter empty states (UC-06)', () => {
+  it('shows a distinct empty state per filter', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await signupFresh(user, 'filters')
+    await skipTourIfShown(user)
+    await addTask(user, 'Only task')
+    await user.click(screen.getByRole('checkbox', { name: /only task/i }))
+
+    await user.click(screen.getByRole('button', { name: /^active$/i }))
+    expect(screen.getByText(/no tasks yet to do/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^completed$/i }))
+    await user.click(screen.getByRole('button', { name: /clear completed/i }))
+    expect(await screen.findByText(/no tasks yet$/i)).toBeInTheDocument()
+  })
 })

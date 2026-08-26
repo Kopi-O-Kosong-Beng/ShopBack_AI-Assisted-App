@@ -80,6 +80,21 @@ describe('importLegacyTodos', () => {
     expect(titles).not.toContain('Colliding')
   })
 
+  it('sanitises bad due dates and titles instead of importing them raw', () => {
+    localStorage.setItem(
+      LEGACY_STORAGE_KEY,
+      JSON.stringify([
+        { ...valid('a', 'Bad due date'), dueDate: 'tomorrow' },
+        { ...valid('b', '   ') },
+        valid('c', 'Fine'),
+      ]),
+    )
+    expect(importLegacyTodos(adb.db, 'u-1')).toBe(2)
+    const todos = listByUser(adb.db, 'u-1')
+    expect(todos.find((t) => t.title === 'Bad due date')?.dueDate).toBeNull()
+    expect(todos.map((t) => t.title).sort()).toEqual(['Bad due date', 'Fine'])
+  })
+
   it('marks imported completed tasks as already XP-awarded', () => {
     localStorage.setItem(
       LEGACY_STORAGE_KEY,

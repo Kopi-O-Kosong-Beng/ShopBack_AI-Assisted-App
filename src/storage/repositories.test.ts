@@ -147,6 +147,15 @@ describe('todoSqlRepository', () => {
     expect(listByUser(adb.db, 'u-1')).toHaveLength(0)
   })
 
+  it('documents that orphan rows are possible: the service layer scopes writes', () => {
+    // The DDL declares REFERENCES users(id), but sql.js does not enforce
+    // foreign keys, so integrity is upheld by the service layer instead.
+    // Pinned here so a future engine change is a visible test failure.
+    insert(adb.db, 'ghost-user', createTodo('Orphan', 'x', 100))
+    expect(listByUser(adb.db, 'ghost-user')).toHaveLength(1)
+    expect(listByUser(adb.db, 'u-1')).toHaveLength(0)
+  })
+
   it('clears completed todos for one user only', () => {
     insertUser(adb.db, { ...sampleUser, id: 'u-2', username: 'other' })
     insert(adb.db, 'u-1', createTodo('Done here', 'a', 100))
