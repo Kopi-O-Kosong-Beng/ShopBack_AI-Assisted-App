@@ -35,6 +35,8 @@ And I will want you to understand the project scope first, and prepare the follo
 
 For the UI, I will give the overview direction first: I want a clean and minimal design, light theme with one accent color, card style task list, a clear empty state when there is no task yet, and it must be mobile responsive. No need fancy animation. We can refine the design details together during the brainstorming phase.
 
+Also, run the app on localhost:3000 with the Vite dev server and keep it running while we work, so I can monitor the app development along the way and see the changes live.
+
 Also, for the way we work together: do not one-shot the whole app. Work in small increments, and stop at each checkpoint for me to review before continue. For the key decisions, give me the options with the tradeoffs and let me decide. If you make any assumption, state it out clearly so I can confirm or correct it. I need to understand everything I ship, so be ready to explain any part of the code when I ask.
 
 I want you to use the "Superpowers" skills for this task. First use the brainstorming sub-skill to clarify the scope, requirement, edge cases, UI before coding, and ask me questions if anything is unclear instead of assuming. Then writing-plans to write down the above listed pre-implementation documents. Then I want you to use test-driven-development sub-skill to write tests for core todo behavior before or alongside implementation. Then I want you to use verification-before-completion to run tests, build, lint and manually verify requirement before finishing. Also you can use systematic-debugging only when something actually breaks.
