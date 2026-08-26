@@ -3,6 +3,10 @@ export interface Todo {
   title: string
   completed: boolean
   createdAt: number
+  /** Epoch ms of the day the task is due, or null when it has no due date. */
+  dueDate: number | null
+  /** True once completing this task has awarded XP, so re-completing cannot farm XP. */
+  xpAwarded: boolean
 }
 
 export type Filter = 'all' | 'active' | 'completed'
@@ -24,8 +28,13 @@ export function validateTitle(raw: string): TitleValidation {
   return { ok: true, value }
 }
 
-export function createTodo(title: string, id: string, createdAt: number): Todo {
-  return { id, title, completed: false, createdAt }
+export function createTodo(
+  title: string,
+  id: string,
+  createdAt: number,
+  dueDate: number | null = null,
+): Todo {
+  return { id, title, completed: false, createdAt, dueDate, xpAwarded: false }
 }
 
 export function addTodo(todos: Todo[], todo: Todo): Todo[] {

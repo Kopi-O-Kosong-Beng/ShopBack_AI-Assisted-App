@@ -18,6 +18,8 @@ const make = (overrides: Partial<Todo> = {}): Todo => ({
   title: 'Buy milk',
   completed: false,
   createdAt: 1000,
+  dueDate: null,
+  xpAwarded: false,
   ...overrides,
 })
 
@@ -58,7 +60,13 @@ describe('createTodo', () => {
       title: 'Buy milk',
       completed: false,
       createdAt: 123,
+      dueDate: null,
+      xpAwarded: false,
     })
+  })
+
+  it('creates a todo with a due date when one is given', () => {
+    expect(createTodo('Buy milk', 'id-9', 123, 456).dueDate).toBe(456)
   })
 })
 
