@@ -1,87 +1,74 @@
 import { useCallback, useState } from 'react'
+import type { AppDatabase } from '../db/database'
+import type { Filter, Todo } from '../domain/todo'
 import {
-  addTodo,
-  clearCompleted,
-  createTodo,
-  deleteTodo,
-  editTodoTitle,
-  toggleTodo,
-  validateTitle,
-  type Filter,
-  type Todo,
-} from '../domain/todo'
-import { loadTodos, saveTodos, type StorageError } from '../storage/todoRepository'
+  addTask as addTaskService,
+  clearCompletedTasks as clearService,
+  deleteTask as deleteService,
+  editTask as editService,
+  toggleTask as toggleService,
+} from '../services/todoService'
+import { listByUser } from '../storage/todoSqlRepository'
 
-function newId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
-export function useTodos() {
-  // Lazy initializer: localStorage is read once, on first render only.
-  const [initial] = useState(loadTodos)
-  const [todos, setTodos] = useState<Todo[]>(initial.todos)
+/**
+ * Task state for one signed-in user. The SQLite database is the source of
+ * truth: every action goes through the service layer, then re-queries.
+ */
+export function useTodos(adb: AppDatabase, userId: string, onXp?: (gained: number) => void) {
+  const [todos, setTodos] = useState<Todo[]>(() => listByUser(adb.db, userId))
   const [filter, setFilter] = useState<Filter>('all')
-  const [storageWarning, setStorageWarning] = useState<StorageError>(initial.error)
 
-  // Every change is persisted by the event that caused it, so a failed write
-  // surfaces immediately instead of one render later.
-  const commit = useCallback((next: Todo[]) => {
-    setTodos(next)
-    if (!saveTodos(next)) {
-      setStorageWarning('unavailable')
-    }
-  }, [])
-
-  const addTask = useCallback(
-    (title: string): string | null => {
-      const result = validateTitle(title)
-      if (!result.ok) return result.error
-      commit(addTodo(todos, createTodo(result.value, newId(), Date.now())))
-      return null
-    },
-    [commit, todos],
+  const reload = useCallback(
+    () => setTodos(listByUser(adb.db, userId)),
+    [adb, userId],
   )
 
-  const editTask = useCallback(
-    (id: string, title: string): string | null => {
-      const result = validateTitle(title)
-      if (!result.ok) return result.error
-      commit(editTodoTitle(todos, id, result.value))
+  const addTask = useCallback(
+    async (title: string, dueDate: number | null): Promise<string | null> => {
+      const { error } = await addTaskService(adb, userId, title, dueDate)
+      if (error) return error
+      reload()
       return null
     },
-    [commit, todos],
+    [adb, userId, reload],
   )
 
   const toggleTask = useCallback(
-    (id: string) => commit(toggleTodo(todos, id)),
-    [commit, todos],
+    async (id: string) => {
+      // Flip locally first so the checkbox responds instantly; the re-query
+      // below replaces this with whatever the database actually stored.
+      setTodos((current) =>
+        current.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
+      )
+      const { xpGained } = await toggleService(adb, userId, id)
+      reload()
+      if (xpGained > 0) onXp?.(xpGained)
+    },
+    [adb, userId, reload, onXp],
+  )
+
+  const editTask = useCallback(
+    async (id: string, title: string, dueDate: number | null): Promise<string | null> => {
+      const error = await editService(adb, id, title, dueDate)
+      if (error) return error
+      reload()
+      return null
+    },
+    [adb, reload],
   )
 
   const deleteTask = useCallback(
-    (id: string) => commit(deleteTodo(todos, id)),
-    [commit, todos],
+    async (id: string) => {
+      await deleteService(adb, id)
+      reload()
+    },
+    [adb, reload],
   )
 
-  const clearCompletedTasks = useCallback(
-    () => commit(clearCompleted(todos)),
-    [commit, todos],
-  )
+  const clearCompletedTasks = useCallback(async () => {
+    await clearService(adb, userId)
+    reload()
+  }, [adb, userId, reload])
 
-  const dismissWarning = useCallback(() => setStorageWarning(null), [])
-
-  return {
-    todos,
-    filter,
-    setFilter,
-    storageWarning,
-    addTask,
-    editTask,
-    toggleTask,
-    deleteTask,
-    clearCompletedTasks,
-    dismissWarning,
-  }
+  return { todos, filter, setFilter, addTask, toggleTask, editTask, deleteTask, clearCompletedTasks }
 }

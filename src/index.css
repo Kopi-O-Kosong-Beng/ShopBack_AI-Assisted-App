@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+/* Logo intro: the cashback loop sweeps in, then the tick draws itself. */
+@keyframes sb-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes sb-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.sb-logo-loop {
+  stroke-dasharray: 90;
+  stroke-dashoffset: 90;
+  animation: sb-draw 0.7s ease-out 0.1s forwards;
+}
+.sb-logo-tick {
+  stroke-dasharray: 46;
+  stroke-dashoffset: 46;
+  animation: sb-draw 0.5s ease-out 0.55s forwards;
+}
+.sb-logo-head {
+  opacity: 0;
+  transform-origin: 36px 15px;
+  animation: sb-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.95s forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-logo-loop,
+  .sb-logo-tick,
+  .sb-logo-head {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ShopBack-style warm red-orange brand accent. */
+@theme {
+  --color-brand-50: #fef4f1;
+  --color-brand-100: #fde6e0;
+  --color-brand-200: #facbbe;
+  --color-brand-300: #f6a891;
+  --color-brand-400: #f07b5b;
+  --color-brand-500: #e8532f;
+  --color-brand-600: #d63e1e;
+  --color-brand-700: #b33217;
+  --color-brand-800: #8f2a15;
+  --color-brand-900: #752514;
+}

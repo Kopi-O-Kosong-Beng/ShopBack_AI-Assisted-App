@@ -1,81 +1,101 @@
 /**
- * Not a test suite: this file drives the real app to capture the screenshots in
+ * Not a test suite: drives the real app to capture the screenshots in
  * /screenshots for the assessment submission. Run with:
- *   npx playwright test e2e/screenshots.spec.ts
+ *   npx playwright test e2e/screenshots.spec.ts --workers=1
  */
 import { test, type Page } from '@playwright/test'
 
 const DIR = 'screenshots'
 
-async function addTask(page: Page, title: string) {
-  await page.getByLabel('New task').fill(title)
-  await page.getByRole('button', { name: 'Add', exact: true }).click()
+async function loginDemo(page: Page) {
+  await page.getByRole('button', { name: 'Try the demo account' }).click()
+  await page.getByRole('tab', { name: 'Tasks' }).waitFor()
 }
 
-async function seed(page: Page) {
-  await addTask(page, 'Read the ShopBack assessment brief')
-  await addTask(page, 'Write the design documents')
-  await addTask(page, 'Build the to-do app')
-  await addTask(page, 'Deploy to Vercel')
+async function dismissTour(page: Page) {
+  const skip = page.getByRole('button', { name: 'Skip' })
+  if (await skip.isVisible().catch(() => false)) await skip.click()
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.setViewportSize({ width: 1000, height: 760 })
+  await page.setViewportSize({ width: 1100, height: 900 })
   await page.goto('/')
 })
 
-test('01 empty state', async ({ page }) => {
-  await page.screenshot({ path: `${DIR}/01-empty-state.png` })
+test('01 login page', async ({ page }) => {
+  await page.waitForTimeout(1400) // let the logo animation finish
+  await page.screenshot({ path: `${DIR}/01-login.png` })
 })
 
-test('02 task list', async ({ page }) => {
-  await seed(page)
-  await page.screenshot({ path: `${DIR}/02-task-list.png` })
+test('02 signup form', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Sign up' }).click()
+  await page.getByLabel('Username').fill('zhifeng')
+  await page.getByLabel('Password').fill('password123')
+  await page.screenshot({ path: `${DIR}/02-signup.png` })
 })
 
-test('03 add validation error', async ({ page }) => {
-  await seed(page)
+test('03 onboarding tour', async ({ page }) => {
+  await page.getByRole('button', { name: 'Try the demo account' }).click()
+  await page.getByRole('dialog').waitFor()
+  await page.screenshot({ path: `${DIR}/03-onboarding.png` })
+})
+
+test('04 task list with mascot', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
+  await page.screenshot({ path: `${DIR}/04-tasks-and-mascot.png` })
+})
+
+test('05 completing a task earns XP', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
+  await page.getByRole('checkbox', { name: 'Plan team lunch' }).check()
+  await page.getByText('+10 XP').waitFor()
+  await page.screenshot({ path: `${DIR}/05-xp-earned.png` })
+})
+
+test('06 inline editing with due date', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
+  await page.getByRole('button', { name: 'Edit "Plan team lunch"' }).click()
+  await page.screenshot({ path: `${DIR}/06-inline-edit.png` })
+})
+
+test('07 validation error', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
-  await page.screenshot({ path: `${DIR}/03-validation-error.png` })
+  await page.screenshot({ path: `${DIR}/07-validation-error.png` })
 })
 
-test('04 completed tasks', async ({ page }) => {
-  await seed(page)
-  await page.getByRole('checkbox', { name: 'Read the ShopBack assessment brief' }).check()
-  await page.getByRole('checkbox', { name: 'Write the design documents' }).check()
-  await page.screenshot({ path: `${DIR}/04-completed-tasks.png` })
+test('08 calendar view', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
+  await page.getByRole('tab', { name: 'Calendar' }).click()
+  await page.screenshot({ path: `${DIR}/08-calendar.png` })
 })
 
-test('05 inline editing', async ({ page }) => {
-  await seed(page)
-  await page.getByRole('button', { name: 'Edit "Build the to-do app"' }).click()
-  await page.getByLabel('Edit task').fill('Build the to-do app with tests')
-  await page.screenshot({ path: `${DIR}/05-inline-edit.png` })
+test('09 leaderboard', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
+  await page.getByRole('tab', { name: 'Leaderboard' }).click()
+  await page.screenshot({ path: `${DIR}/09-leaderboard.png` })
 })
 
-test('06 active filter', async ({ page }) => {
-  await seed(page)
-  await page.getByRole('checkbox', { name: 'Deploy to Vercel' }).check()
-  await page.getByRole('button', { name: 'Active', exact: true }).click()
-  await page.screenshot({ path: `${DIR}/06-filter-active.png` })
+test('10 stressed mascot with a heavy task load', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
+  for (const title of ['Q3 report', 'Merchant audit', 'Fix payout bug', 'Reply to vendor']) {
+    await page.getByLabel('New task').fill(title)
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await page.getByText(title).waitFor()
+  }
+  await page.screenshot({ path: `${DIR}/10-mascot-stressed.png` })
 })
 
-test('07 completed filter', async ({ page }) => {
-  await seed(page)
-  await page.getByRole('checkbox', { name: 'Deploy to Vercel' }).check()
-  await page.getByRole('button', { name: 'Completed', exact: true }).click()
-  await page.screenshot({ path: `${DIR}/07-filter-completed.png` })
-})
-
-test('08 storage warning', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('shopback-todo.v1', 'corrupted{{{'))
-  await page.reload()
-  await page.screenshot({ path: `${DIR}/08-storage-warning.png` })
-})
-
-test('09 mobile view', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 780 })
-  await seed(page)
-  await page.getByRole('checkbox', { name: 'Deploy to Vercel' }).check()
-  await page.screenshot({ path: `${DIR}/09-mobile-view.png` })
+test('11 mobile view', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 840 })
+  await loginDemo(page)
+  await dismissTour(page)
+  await page.screenshot({ path: `${DIR}/11-mobile.png` })
 })

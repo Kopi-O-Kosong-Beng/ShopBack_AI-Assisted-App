@@ -12,7 +12,7 @@ export default function EmptyState({ filter }: { filter: Filter }) {
     <div className="px-6 py-14 text-center">
       <div
         aria-hidden="true"
-        className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-2xl"
+        className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-2xl"
       >
         📝
       </div>

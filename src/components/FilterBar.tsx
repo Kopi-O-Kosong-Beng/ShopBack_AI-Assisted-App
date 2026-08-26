@@ -34,9 +34,9 @@ export default function FilterBar({
             type="button"
             onClick={() => onFilterChange(value)}
             aria-pressed={filter === value}
-            className={`rounded-lg px-3 py-1.5 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
+            className={`rounded-lg px-3 py-1.5 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
               filter === value
-                ? 'bg-indigo-50 text-indigo-700'
+                ? 'bg-brand-50 text-brand-700'
                 : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
             }`}
           >

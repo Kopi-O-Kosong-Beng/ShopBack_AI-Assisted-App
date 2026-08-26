@@ -1,20 +1,33 @@
 import { useState, type KeyboardEvent } from 'react'
+import { dueBadge } from '../domain/calendar'
 import { MAX_TITLE_LENGTH, type Todo } from '../domain/todo'
+import { useNow } from '../hooks/useNow'
+import { parseDueInput, toDateInputValue } from '../lib/dateInput'
 
 interface Props {
   todo: Todo
   onToggle: (id: string) => void
-  onEdit: (id: string, title: string) => string | null
+  onEdit: (id: string, title: string, dueDate: number | null) => Promise<string | null>
   onDelete: (id: string) => void
 }
+
+const BADGE_STYLES = {
+  overdue: 'bg-rose-50 text-rose-700',
+  today: 'bg-amber-50 text-amber-700',
+  upcoming: 'bg-slate-100 text-slate-500',
+} as const
 
 export default function TodoItem({ todo, onToggle, onEdit, onDelete }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(todo.title)
+  const [draftDue, setDraftDue] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  const badge = dueBadge(todo, useNow())
 
   function startEditing() {
     setDraft(todo.title)
+    setDraftDue(toDateInputValue(todo.dueDate))
     setError(null)
     setIsEditing(true)
   }
@@ -24,8 +37,8 @@ export default function TodoItem({ todo, onToggle, onEdit, onDelete }: Props) {
     setError(null)
   }
 
-  function save() {
-    const failure = onEdit(todo.id, draft)
+  async function save() {
+    const failure = await onEdit(todo.id, draft, parseDueInput(draftDue))
     if (failure) {
       setError(failure)
       return
@@ -37,7 +50,7 @@ export default function TodoItem({ todo, onToggle, onEdit, onDelete }: Props) {
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
       event.preventDefault()
-      save()
+      void save()
     } else if (event.key === 'Escape') {
       event.preventDefault()
       cancelEditing()
@@ -60,13 +73,20 @@ export default function TodoItem({ todo, onToggle, onEdit, onDelete }: Props) {
               if (error) setError(null)
             }}
             onKeyDown={handleKeyDown}
-            className="min-w-0 flex-1 rounded-lg border border-indigo-300 px-3 py-2 text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className="min-w-0 flex-1 rounded-lg border border-brand-300 px-3 py-2 text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          />
+          <input
+            type="date"
+            value={draftDue}
+            aria-label="Due date"
+            onChange={(e) => setDraftDue(e.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-slate-600 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
           <div className="flex shrink-0 gap-2">
             <button
               type="button"
-              onClick={save}
-              className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+              onClick={() => void save()}
+              className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
             >
               Save
             </button>
@@ -95,7 +115,7 @@ export default function TodoItem({ todo, onToggle, onEdit, onDelete }: Props) {
         checked={todo.completed}
         aria-label={todo.title}
         onChange={() => onToggle(todo.id)}
-        className="h-5 w-5 shrink-0 cursor-pointer accent-indigo-600"
+        className="h-5 w-5 shrink-0 cursor-pointer accent-brand-600"
       />
       <span
         className={`min-w-0 flex-1 wrap-break-word text-slate-800 ${
@@ -103,13 +123,20 @@ export default function TodoItem({ todo, onToggle, onEdit, onDelete }: Props) {
         }`}
       >
         {todo.title}
+        {badge && (
+          <span
+            className={`ml-2 inline-block rounded-full px-2 py-0.5 align-middle text-xs font-medium ${BADGE_STYLES[badge.tone]}`}
+          >
+            {badge.label}
+          </span>
+        )}
       </span>
       <div className="flex shrink-0 gap-1">
         <button
           type="button"
           onClick={startEditing}
           aria-label={`Edit "${todo.title}"`}
-          className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+          className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
         >
           Edit
         </button>

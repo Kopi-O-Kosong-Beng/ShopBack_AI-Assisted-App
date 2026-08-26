@@ -4,7 +4,7 @@ import TodoItem from './TodoItem'
 interface Props {
   todos: Todo[]
   onToggle: (id: string) => void
-  onEdit: (id: string, title: string) => string | null
+  onEdit: (id: string, title: string, dueDate: number | null) => Promise<string | null>
   onDelete: (id: string) => void
 }
 
