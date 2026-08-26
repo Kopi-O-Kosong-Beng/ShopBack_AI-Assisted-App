@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('01 login page', async ({ page }) => {
-  await page.waitForTimeout(1400) // let the logo animation finish
+  await page.waitForTimeout(1800) // let the logo animation finish drawing
   await page.screenshot({ path: `${DIR}/01-login.png` })
 })
 
@@ -31,6 +31,8 @@ test('02 signup form', async ({ page }) => {
   await page.getByRole('tab', { name: 'Sign up' }).click()
   await page.getByLabel('Username').fill('zhifeng')
   await page.getByLabel('Password').fill('password123')
+  // The logo draws itself over ~1.3s; wait it out so the mark is complete.
+  await page.waitForTimeout(1800)
   await page.screenshot({ path: `${DIR}/02-signup.png` })
 })
 
