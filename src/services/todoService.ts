@@ -71,20 +71,25 @@ export async function toggleTask(
 
 export async function editTask(
   adb: AppDatabase,
+  userId: string,
   id: string,
   title: string,
   dueDate: number | null,
 ): Promise<string | null> {
   const result = validateTitle(title)
   if (!result.ok) return result.error
-  updateTitle(adb.db, id, result.value)
-  updateDueDate(adb.db, id, dueDate)
+  updateTitle(adb.db, userId, id, result.value)
+  updateDueDate(adb.db, userId, id, dueDate)
   await adb.persist()
   return null
 }
 
-export async function deleteTask(adb: AppDatabase, id: string): Promise<void> {
-  remove(adb.db, id)
+export async function deleteTask(
+  adb: AppDatabase,
+  userId: string,
+  id: string,
+): Promise<void> {
+  remove(adb.db, userId, id)
   await adb.persist()
 }
 

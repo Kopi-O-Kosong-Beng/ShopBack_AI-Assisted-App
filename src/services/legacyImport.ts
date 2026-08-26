@@ -14,25 +14,25 @@ interface LegacyTodo {
   xpAwarded?: boolean
 }
 
-export function isValidLegacyArray(value: unknown): value is LegacyTodo[] {
+export function isValidLegacyItem(item: unknown): item is LegacyTodo {
   return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        typeof item === 'object' &&
-        item !== null &&
-        typeof (item as LegacyTodo).id === 'string' &&
-        typeof (item as LegacyTodo).title === 'string' &&
-        typeof (item as LegacyTodo).completed === 'boolean' &&
-        typeof (item as LegacyTodo).createdAt === 'number',
-    )
+    typeof item === 'object' &&
+    item !== null &&
+    typeof (item as LegacyTodo).id === 'string' &&
+    typeof (item as LegacyTodo).title === 'string' &&
+    typeof (item as LegacyTodo).completed === 'boolean' &&
+    typeof (item as LegacyTodo).createdAt === 'number'
   )
 }
 
 /**
- * One-time migration: moves any v1 localStorage todos into the given account,
- * then removes the legacy key. Already-completed tasks are marked xpAwarded so
- * the migration cannot mint retroactive XP. Returns how many were imported.
+ * One-time migration: moves any v1 localStorage todos into the given account.
+ * Validation is per item, so one malformed entry cannot discard the rest.
+ * The legacy key is removed only after a successful read; data we could not
+ * read is left in place rather than destroyed. Already-completed tasks are
+ * marked xpAwarded so the migration cannot mint retroactive XP.
+ * Returns how many todos were imported. Never throws: a broken legacy blob
+ * must never block signup.
  */
 export function importLegacyTodos(
   db: Database,
@@ -49,30 +49,36 @@ export function importLegacyTodos(
   }
   if (raw === null) return 0
 
-  let imported = 0
+  let parsed: unknown
   try {
-    const parsed: unknown = JSON.parse(raw)
-    if (isValidLegacyArray(parsed)) {
-      for (const legacy of parsed) {
-        const todo: Todo = {
-          id: legacy.id,
-          title: legacy.title,
-          completed: legacy.completed,
-          createdAt: legacy.createdAt,
-          dueDate: legacy.dueDate ?? null,
-          xpAwarded: legacy.xpAwarded ?? legacy.completed,
-        }
-        insert(db, userId, todo)
-        imported++
-      }
-    }
+    parsed = JSON.parse(raw)
   } catch {
-    // Unreadable legacy data: drop it rather than block signup.
+    return 0 // Unreadable: keep the key so the data is not silently destroyed.
+  }
+  if (!Array.isArray(parsed)) return 0 // Wrong shape: same rule, keep the key.
+
+  let imported = 0
+  for (const item of parsed) {
+    if (!isValidLegacyItem(item)) continue
+    const todo: Todo = {
+      id: item.id,
+      title: item.title,
+      completed: item.completed,
+      createdAt: item.createdAt,
+      dueDate: item.dueDate ?? null,
+      xpAwarded: item.xpAwarded ?? item.completed,
+    }
+    try {
+      insert(db, userId, todo)
+      imported++
+    } catch {
+      // Most likely an id collision from a repeated import: skip this row.
+    }
   }
   try {
     store.removeItem(LEGACY_STORAGE_KEY)
   } catch {
-    // Ignore: worst case the key lingers.
+    // Ignore: worst case the key lingers and the next signup re-skips duplicates.
   }
   return imported
 }

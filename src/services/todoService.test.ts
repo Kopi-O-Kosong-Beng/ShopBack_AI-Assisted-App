@@ -104,7 +104,7 @@ describe('editTask', () => {
   it('updates title and due date', async () => {
     await addTask(adb, 'u-1', 'Old', null, NOW)
     const [todo] = listByUser(adb.db, 'u-1')
-    const error = await editTask(adb, todo.id, 'New', NOW + DAY)
+    const error = await editTask(adb, 'u-1', todo.id, 'New', NOW + DAY)
     expect(error).toBeNull()
     const [updated] = listByUser(adb.db, 'u-1')
     expect(updated.title).toBe('New')
@@ -114,9 +114,99 @@ describe('editTask', () => {
   it('rejects an empty edited title', async () => {
     await addTask(adb, 'u-1', 'Keep me', null, NOW)
     const [todo] = listByUser(adb.db, 'u-1')
-    const error = await editTask(adb, todo.id, '  ', null)
+    const error = await editTask(adb, 'u-1', todo.id, '  ', null)
     expect(error).toBe('Task cannot be empty')
     expect(listByUser(adb.db, 'u-1')[0].title).toBe('Keep me')
+  })
+})
+
+describe('ownership', () => {
+  beforeEach(async () => {
+    insertUser(adb.db, {
+      id: 'u-2',
+      username: 'other',
+      passwordHash: 'x',
+      salt: 'x',
+      department: 'Product',
+      createdAt: 0,
+    })
+    await addTask(adb, 'u-2', 'Their task', null, NOW)
+  })
+
+  it('cannot edit another user\'s task', async () => {
+    const [theirs] = listByUser(adb.db, 'u-2')
+    await editTask(adb, 'u-1', theirs.id, 'Hijacked', null)
+    expect(listByUser(adb.db, 'u-2')[0].title).toBe('Their task')
+  })
+
+  it('cannot delete another user\'s task', async () => {
+    const [theirs] = listByUser(adb.db, 'u-2')
+    await deleteTask(adb, 'u-1', theirs.id)
+    expect(listByUser(adb.db, 'u-2')).toHaveLength(1)
+  })
+
+  it('cannot toggle another user\'s task or earn XP from it', async () => {
+    const [theirs] = listByUser(adb.db, 'u-2')
+    const result = await toggleTask(adb, 'u-1', theirs.id, NOW)
+    expect(result.xpGained).toBe(0)
+    expect(listByUser(adb.db, 'u-2')[0].completed).toBe(false)
+    expect(findById(adb.db, 'u-1')?.xp).toBe(0)
+  })
+})
+
+describe('unknown ids and persistence discipline', () => {
+  it('toggling an unknown id changes nothing and skips the snapshot write', async () => {
+    const before = saves
+    const result = await toggleTask(adb, 'u-1', 'ghost-id', NOW)
+    expect(result).toEqual({ xpGained: 0, completed: false, alreadyAwarded: false })
+    expect(saves).toBe(before)
+  })
+
+  it('persists a snapshot on every successful mutation', async () => {
+    await addTask(adb, 'u-1', 'Track saves', null, NOW)
+    const [todo] = listByUser(adb.db, 'u-1')
+
+    let before = saves
+    await toggleTask(adb, 'u-1', todo.id, NOW)
+    expect(saves).toBe(before + 1)
+
+    before = saves
+    await editTask(adb, 'u-1', todo.id, 'Renamed', null)
+    expect(saves).toBe(before + 1)
+
+    before = saves
+    await deleteTask(adb, 'u-1', todo.id)
+    expect(saves).toBe(before + 1)
+
+    before = saves
+    await clearCompletedTasks(adb, 'u-1')
+    expect(saves).toBe(before + 1)
+  })
+
+  it('does not persist when validation rejects the input', async () => {
+    const before = saves
+    await addTask(adb, 'u-1', '   ', null, NOW)
+    expect(saves).toBe(before)
+  })
+
+  it('still succeeds in memory when the snapshot write throws', async () => {
+    const adapter = memoryAdapter()
+    adapter.save = async () => {
+      throw new Error('quota exceeded')
+    }
+    const broken = (await testDatabase(adapter)).adb
+    insertUser(broken.db, {
+      id: 'u-1',
+      username: 'zhifeng',
+      passwordHash: 'x',
+      salt: 'x',
+      department: 'Engineering',
+      createdAt: 0,
+    })
+    const result = await addTask(broken, 'u-1', 'Survives quota', null, NOW)
+    expect(result.error).toBeNull()
+    expect(listByUser(broken.db, 'u-1')).toHaveLength(1)
+    broken.close()
   })
 })
 
@@ -124,7 +214,7 @@ describe('deleteTask and clearCompletedTasks', () => {
   it('deletes a task', async () => {
     await addTask(adb, 'u-1', 'Task', null, NOW)
     const [todo] = listByUser(adb.db, 'u-1')
-    await deleteTask(adb, todo.id)
+    await deleteTask(adb, 'u-1', todo.id)
     expect(listByUser(adb.db, 'u-1')).toHaveLength(0)
   })
 

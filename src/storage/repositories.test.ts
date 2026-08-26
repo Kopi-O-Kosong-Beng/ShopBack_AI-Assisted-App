@@ -111,13 +111,24 @@ describe('todoSqlRepository', () => {
 
   it('updates title and due date', () => {
     insert(adb.db, 'u-1', createTodo('Old', 'a', 100))
-    updateTitle(adb.db, 'a', 'New')
-    updateDueDate(adb.db, 'a', 9000)
+    updateTitle(adb.db, 'u-1', 'a', 'New')
+    updateDueDate(adb.db, 'u-1', 'a', 9000)
     let [todo] = listByUser(adb.db, 'u-1')
     expect(todo.title).toBe('New')
     expect(todo.dueDate).toBe(9000)
-    updateDueDate(adb.db, 'a', null)
+    updateDueDate(adb.db, 'u-1', 'a', null)
     ;[todo] = listByUser(adb.db, 'u-1')
+    expect(todo.dueDate).toBeNull()
+  })
+
+  it('scopes updates and deletes to the owning user', () => {
+    insertUser(adb.db, { ...sampleUser, id: 'u-2', username: 'intruder' })
+    insert(adb.db, 'u-1', createTodo('Mine', 'a', 100))
+    updateTitle(adb.db, 'u-2', 'a', 'Stolen')
+    updateDueDate(adb.db, 'u-2', 'a', 1234)
+    remove(adb.db, 'u-2', 'a')
+    const [todo] = listByUser(adb.db, 'u-1')
+    expect(todo.title).toBe('Mine')
     expect(todo.dueDate).toBeNull()
   })
 
@@ -132,7 +143,7 @@ describe('todoSqlRepository', () => {
 
   it('removes a todo', () => {
     insert(adb.db, 'u-1', createTodo('Task', 'a', 100))
-    remove(adb.db, 'a')
+    remove(adb.db, 'u-1', 'a')
     expect(listByUser(adb.db, 'u-1')).toHaveLength(0)
   })
 

@@ -100,4 +100,18 @@ describe('rankUsers', () => {
     const ranked = rankUsers([user('a', 100), user('b', 100), user('c', 50)])
     expect(ranked.map((r) => r.rank)).toEqual([1, 1, 3])
   })
+
+  it('handles an empty list and a full tie', () => {
+    expect(rankUsers([])).toEqual([])
+    const allTied = rankUsers([user('a', 10), user('b', 10), user('c', 10)])
+    expect(allTied.map((r) => r.rank)).toEqual([1, 1, 1])
+  })
+})
+
+describe('levelProgress at an exact level boundary', () => {
+  it('shows zero progress right after levelling up', () => {
+    const progress = levelProgress(XP_PER_LEVEL * 2)
+    expect(progress.current).toBe(0)
+    expect(progress.percent).toBe(0)
+  })
 })

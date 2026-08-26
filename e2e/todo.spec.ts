@@ -39,7 +39,9 @@ async function addTask(page: Page, title: string, dueIso?: string) {
   await page.getByLabel('New task').fill(title)
   if (dueIso) await page.getByLabel('Due date').fill(dueIso)
   await page.getByRole('button', { name: 'Add', exact: true }).click()
-  await expect(page.getByText(title)).toBeVisible()
+  // Anchor on the checkbox aria-label: it is exactly the title, so this cannot
+  // substring-match the "Task added" toast or pick up due-date badge text.
+  await expect(page.getByRole('checkbox', { name: title, exact: true })).toBeVisible()
 }
 
 test.beforeEach(async ({ page }) => {

@@ -53,12 +53,21 @@ export function insert(db: Database, userId: string, todo: Todo): void {
   )
 }
 
-export function updateTitle(db: Database, id: string, title: string): void {
-  db.run('UPDATE todos SET title = ? WHERE id = ?', [title, id])
+export function updateTitle(db: Database, userId: string, id: string, title: string): void {
+  db.run('UPDATE todos SET title = ? WHERE id = ? AND user_id = ?', [title, id, userId])
 }
 
-export function updateDueDate(db: Database, id: string, dueDate: number | null): void {
-  db.run('UPDATE todos SET due_date = ? WHERE id = ?', [dueDate, id])
+export function updateDueDate(
+  db: Database,
+  userId: string,
+  id: string,
+  dueDate: number | null,
+): void {
+  db.run('UPDATE todos SET due_date = ? WHERE id = ? AND user_id = ?', [
+    dueDate,
+    id,
+    userId,
+  ])
 }
 
 export function setCompleted(db: Database, id: string, completed: boolean): void {
@@ -69,8 +78,8 @@ export function markXpAwarded(db: Database, id: string): void {
   db.run('UPDATE todos SET xp_awarded = 1 WHERE id = ?', [id])
 }
 
-export function remove(db: Database, id: string): void {
-  db.run('DELETE FROM todos WHERE id = ?', [id])
+export function remove(db: Database, userId: string, id: string): void {
+  db.run('DELETE FROM todos WHERE id = ? AND user_id = ?', [id, userId])
 }
 
 export function clearCompleted(db: Database, userId: string): void {

@@ -1,10 +1,10 @@
-# 04 — Component Architecture
+# 04 - Component Architecture
 
 This document specifies the component and module architecture of the ShopBack To-Do app before implementation. It defines the layers, the responsibility of each component and module, the props/state contract between them, and the data-flow rules that every piece of code must follow.
 
 **Stack:** TypeScript · React 19 · Vite · Tailwind CSS v4 · sql.js (SQLite compiled to WebAssembly) · IndexedDB (binary database snapshot) · Web Crypto (PBKDF2-SHA256) · Vitest + React Testing Library + fake-indexeddb · Playwright
 
-The app is frontend-only. SQLite runs **in the browser** via sql.js; the entire database is exported and persisted as a binary snapshot into IndexedDB after every mutation and loaded on startup. **Documented assumption:** accounts are local to the device/browser — a real cross-device login would need a backend, which is out of scope.
+The app is frontend-only. SQLite runs **in the browser** via sql.js; the entire database is exported and persisted as a binary snapshot into IndexedDB after every mutation and loaded on startup. **Documented assumption:** accounts are local to the device/browser - a real cross-device login would need a backend, which is out of scope.
 
 The brand accent token is `brand`, a ShopBack-style red-orange (replacing the v1 indigo).
 
@@ -111,18 +111,18 @@ flowchart TD
 | Components | `src/components/*.tsx`, `src/App.tsx` | Render UI, capture user input, display errors. No business rules. | React, `useApp`, `useTodos`, domain **types** and pure **read** helpers (`cortisolLevel`, `dueBadge`, `buildMonthGrid`, `levelTitle`, `rankUsers`, …) |
 | Hooks/context | `src/app/AppContext.tsx`, `src/hooks/useTodos.ts` | Boot the database, restore the session, own React state, orchestrate service calls, re-query the database after mutations. | React, services, repositories (reads), `AppDatabase` type |
 | Services | `src/services/authService.ts`, `src/services/todoService.ts` | Use-case orchestration: input validation via domain rules, repository writes, XP awarding, legacy import, snapshot persistence after every mutation. | Domain, repositories, auth utilities, `AppDatabase` type |
-| Domain | `src/domain/todo.ts`, `xp.ts`, `mascot.ts`, `calendar.ts` | All business rules: validation, todo mutations, XP and levels, cortisol and moods, calendar math, due badges. Pure and immutable. | Only `Todo`/type imports between domain modules — no React, no browser APIs, no sql.js |
+| Domain | `src/domain/todo.ts`, `xp.ts`, `mascot.ts`, `calendar.ts` | All business rules: validation, todo mutations, XP and levels, cortisol and moods, calendar math, due badges. Pure and immutable. | Only `Todo`/type imports between domain modules - no React, no browser APIs, no sql.js |
 | Repositories + auth utilities | `src/storage/userRepository.ts`, `src/storage/todoSqlRepository.ts`, `src/auth/password.ts`, `src/auth/sessionStore.ts` | Translate between domain objects and SQL rows; hash and verify passwords with Web Crypto; read/write the session key. | Domain types, sql.js `Database` type, Web Crypto, `Storage` interface |
 | Database | `src/db/database.ts` | Create the sql.js instance (injectable `wasmBinary` and storage adapter), run migrations tracked in the `meta` table, seed demo users on a fresh database, export/persist the snapshot. | sql.js, storage adapter interface |
-| Browser | IndexedDB, localStorage | Physical persistence: the exported SQLite snapshot lives in IndexedDB; the session lives under `shopback-todo.session.v1` in localStorage. | — |
+| Browser | IndexedDB, localStorage | Physical persistence: the exported SQLite snapshot lives in IndexedDB; the session lives under `shopback-todo.session.v1` in localStorage. | - |
 
 The database holds three tables: `users` (id, username, password_hash, salt, department, xp, has_seen_onboarding, is_demo, created_at), `todos` (id, user_id, title, completed, created_at, due_date nullable, xp_awarded), and `meta` (key/value, holding the schema version). The full schema and domain model are specified in `03-domain-model.md`.
 
 ### Dependency rules
 
-- **Writes always go down the full stack.** Components never call a repository write or a domain mutation function directly — every state change goes component → `useTodos`/`useApp` action → service → repository → sql.js → snapshot persist.
+- **Writes always go down the full stack.** Components never call a repository write or a domain mutation function directly - every state change goes component → `useTodos`/`useApp` action → service → repository → sql.js → snapshot persist.
 - **Reads may take a shortcut.** View components may call pure domain read helpers for display (Mascot computes cortisol and mood, TodoItem computes its due badge, CalendarView builds the month grid), and `Leaderboard` may run the read-only `listLeaderboard` query using the `adb` handle from `useApp`. Reads never change state, so this does not weaken the single source of truth.
-- Domain files have **zero runtime imports** outside `src/domain/` (only the `Todo` type is shared between them). Every function takes inputs and returns new values — arrays and objects are never mutated in place.
+- Domain files have **zero runtime imports** outside `src/domain/` (only the `Todo` type is shared between them). Every function takes inputs and returns new values - arrays and objects are never mutated in place.
 - `src/db/database.ts` exposes `createAppDatabase` with an injectable `wasmBinary` and an injectable storage adapter: the IndexedDB adapter is the default in the app; an in-memory adapter is injected in unit and integration tests so no browser storage is touched.
 - `src/auth/sessionStore.ts` accepts an optional `Storage` parameter (defaulting to `window.localStorage`) so unit tests inject a mock.
 - `useTodos` is the only module that combines service writes with repository reads: it calls `todoService` to mutate, then `todoSqlRepository.listByUser` to re-query, and sets React state from the query result.
@@ -135,26 +135,26 @@ The database holds three tables: `users` (id, username, password_hash, salt, dep
 
 | Component | Props | Local state | Actions triggered |
 | --- | --- | --- | --- |
-| `App` | — | — | Reads `useApp`; renders a boot-error screen if the database failed to open, `AuthPage` when no user, `Shell` when logged in |
-| `AuthPage` | — | `mode: 'login' \| 'signup'` | `login`, `signup`, `demoLogin` from `useApp` (demo button signs in as username `demo`, password `demo1234`) |
+| `App` | - | - | Reads `useApp`; renders a boot-error screen if the database failed to open, `AuthPage` when no user, `Shell` when logged in |
+| `AuthPage` | - | `mode: 'login' \| 'signup'` | `login`, `signup`, `demoLogin` from `useApp` (demo button signs in as username `demo`, password `demo1234`) |
 | `LoginForm` | `onLogin: (username, password) => Promise<string \| null>` | `username`, `password`, `error: string \| null` | `authService.login` via `useApp` |
 | `SignupForm` | `onSignup: (username, password, department) => Promise<string \| null>` | `username`, `password`, `department`, `error: string \| null` | `authService.signup` via `useApp` (username 3–20 alphanumeric, password min 8 chars, department from `DEPARTMENTS`) |
-| `Shell` | — | `activeTab: 'tasks' \| 'calendar' \| 'leaderboard'`, `isTourOpen: boolean`; owns the `useTodos` instance | `logout` from `useApp`; opens `OnboardingTour` automatically when `user.hasSeenOnboarding` is false, or via the header help button. Header shows app name, user chip with level title and XP, help button, logout, and the three tabs |
+| `Shell` | - | `activeTab: 'tasks' \| 'calendar' \| 'leaderboard'`, `isTourOpen: boolean`; owns the `useTodos` instance | `logout` from `useApp`; opens `OnboardingTour` automatically when `user.hasSeenOnboarding` is false, or via the header help button. Header shows app name, user chip with level title and XP, help button, logout, and the three tabs |
 | `OnboardingTour` | `open: boolean`, `onClose: () => void` | `step: number` (0–3 across the 4 tour steps) | `completeOnboarding` from `useApp` on Finish or Skip (sets `has_seen_onboarding`); Next/Back navigate steps |
-| `TodosView` | `todos: Todo[]`, `filter: Filter`, plus the `useTodos` action callbacks below | — | Derives the visible list via `filterTodos` and `itemsLeft` via `activeCount`; composes Mascot, AddTodoForm, FilterBar, TodoList, EmptyState |
-| `Mascot` | `todos: Todo[]` | — | Pure display: computes `cortisolLevel`, `moodForCortisol`, `mascotMessage` from `src/domain/mascot.ts`; renders Kapi the capybara as inline SVG with a per-mood expression and message |
-| `CortisolBar` | `level: number` (0–100), `mood: Mood` | — | Pure display of the cortisol bar |
+| `TodosView` | `todos: Todo[]`, `filter: Filter`, plus the `useTodos` action callbacks below | - | Derives the visible list via `filterTodos` and `itemsLeft` via `activeCount`; composes Mascot, AddTodoForm, FilterBar, TodoList, EmptyState |
+| `Mascot` | `todos: Todo[]` | - | Pure display: computes `cortisolLevel`, `moodForCortisol`, `mascotMessage` from `src/domain/mascot.ts`; renders Kapi the capybara as inline SVG with a per-mood expression and message |
+| `CortisolBar` | `level: number` (0–100), `mood: Mood` | - | Pure display of the cortisol bar |
 | `AddTodoForm` | `onAdd: (title: string, dueDate: number \| null) => string \| null` | `title`, `dueDate: number \| null` (optional due-date input; past dates allowed), `error: string \| null` | `addTask` via `onAdd`; on `null` result clears input and error, otherwise shows returned error |
-| `FilterBar` | `filter: Filter`, `onFilterChange: (f: Filter) => void`, `itemsLeft: number`, `hasCompleted: boolean`, `onClearCompleted: () => void` | — | `setFilter`, `clearCompletedTasks` |
-| `TodoList` | `todos: Todo[]`, `onToggle: (id) => void`, `onDelete: (id) => void`, `onEdit: (id, title, dueDate) => string \| null` | — | Pure pass-through to `TodoItem` |
-| `TodoItem` | `todo: Todo`, `onToggle`, `onDelete`, `onEdit` (same signatures as above) | `isEditing: boolean`, `draft: string`, `draftDueDate: number \| null`, `editError: string \| null` | `toggleTask` (checkbox), `deleteTask`, `editTask` (Save/Enter; Escape or Cancel discards). Renders the due badge via `dueBadge` — Overdue in red, Today, Tomorrow, or a short date |
-| `EmptyState` | `filter: Filter` | — | Message varies by active filter |
+| `FilterBar` | `filter: Filter`, `onFilterChange: (f: Filter) => void`, `itemsLeft: number`, `hasCompleted: boolean`, `onClearCompleted: () => void` | - | `setFilter`, `clearCompletedTasks` |
+| `TodoList` | `todos: Todo[]`, `onToggle: (id) => void`, `onDelete: (id) => void`, `onEdit: (id, title, dueDate) => string \| null` | - | Pure pass-through to `TodoItem` |
+| `TodoItem` | `todo: Todo`, `onToggle`, `onDelete`, `onEdit` (same signatures as above) | `isEditing: boolean`, `draft: string`, `draftDueDate: number \| null`, `editError: string \| null` | `toggleTask` (checkbox), `deleteTask`, `editTask` (Save/Enter; Escape or Cancel discards). Renders the due badge via `dueBadge` - Overdue in red, Today, Tomorrow, or a short date |
+| `EmptyState` | `filter: Filter` | - | Message varies by active filter |
 | `CalendarView` | `todos: Todo[]` | `viewYear: number`, `viewMonth: number` | Read-only view: `buildMonthGrid` renders a Monday-start month grid with previous/next navigation, a highlighted today cell, and task chips on their due dates via `todosOn`, with completed styling |
-| `Leaderboard` | — | — | Read-only view: queries `userRepository.listLeaderboard` through `useApp().adb`, ranks with `rankUsers` (XP descending, competition ranking for ties), shows rank, username, department, level title, XP; highlights the current user's row; notes that the seeded 7 colleagues are demo data |
+| `Leaderboard` | - | - | Read-only view: queries `userRepository.listLeaderboard` through `useApp().adb`, ranks with `rankUsers` (XP descending, competition ranking for ties), shows rank, username, department, level title, XP; highlights the current user's row; notes that the seeded 7 colleagues are demo data |
 
 Notes on the contract:
 
-- `onAdd` and `onEdit` return `string | null` — the validation error message or success. This lets `AddTodoForm` and `TodoItem` render inline errors locally without lifting transient error state into the hook.
+- `onAdd` and `onEdit` return `string | null` - the validation error message or success. This lets `AddTodoForm` and `TodoItem` render inline errors locally without lifting transient error state into the hook.
 - Draft text and draft due dates are deliberately local: they are transient UI state, not application state, and must not be persisted or shared.
 - `StorageWarning` from v1 is **retired**. Storage failure is now a boot concern: `AppContext` exposes a boot error when the database cannot be created or the snapshot cannot be loaded, and `App` renders a full-page error state instead of a dismissible banner.
 - `toggleTask` returns `xpGained` (0, 10, or 15). When it is above zero the hook asks `AppContext` to refresh the current user row, so the header chip and the leaderboard reflect the new XP without a reload.
@@ -178,7 +178,7 @@ The in-memory sql.js SQLite database owned by `AppContext` is the one authoritat
 
 ### Unidirectional flow with re-query
 
-State flows **down** as props; intent flows **up** as action calls. A user interaction never mutates data where it happens — it invokes a hook action, the hook calls a service, the service applies domain rules and writes SQL through a repository, persists the snapshot, and returns; the hook then re-queries and sets state, and React re-renders the subtree with fresh props.
+State flows **down** as props; intent flows **up** as action calls. A user interaction never mutates data where it happens - it invokes a hook action, the hook calls a service, the service applies domain rules and writes SQL through a repository, persists the snapshot, and returns; the hook then re-queries and sets state, and React re-renders the subtree with fresh props.
 
 ```mermaid
 sequenceDiagram
@@ -215,7 +215,7 @@ sequenceDiagram
     H->>H: refreshUser in AppContext when xpGained above zero
 ```
 
-The same shape applies to every mutating use case: `addTask`, `editTask`, `deleteTask`, and `clearCompletedTasks` each map to one service call, one set of SQL writes, one snapshot persist, and one re-query. XP cannot be farmed: `toggleTask` skips the award entirely whenever `xpAwarded` is already true — `completionXp` is never even consulted — and un-completing a task never removes XP.
+The same shape applies to every mutating use case: `addTask`, `editTask`, `deleteTask`, and `clearCompletedTasks` each map to one service call, one set of SQL writes, one snapshot persist, and one re-query. XP cannot be farmed: `toggleTask` skips the award entirely whenever `xpAwarded` is already true - `completionXp` is never even consulted - and un-completing a task never removes XP.
 
 ### Snapshot persistence
 
@@ -232,8 +232,8 @@ On signup, `authService` performs the one-time legacy import: any v1 tasks under
 
 ### Presentational components, testable core
 
-- **Components are presentational.** They contain rendering logic and transient input state only. `TodoItem` does not know that empty titles are invalid — it displays whatever string `onEdit` returns. This keeps components trivial to integration-test through user interactions (`src/App.test.tsx`, IT-xx, with fake-indexeddb and an injected wasm binary).
-- **All business rules live in the domain layer.** Title validation and the `MAX_TITLE_LENGTH = 200` cap, newest-first ordering, XP amounts and level titles, cortisol thresholds and moods, and calendar math are pure functions unit-tested exhaustively with plain Vitest (UT-xx) — no React, no DOM, no mocks.
+- **Components are presentational.** They contain rendering logic and transient input state only. `TodoItem` does not know that empty titles are invalid - it displays whatever string `onEdit` returns. This keeps components trivial to integration-test through user interactions (`src/App.test.tsx`, IT-xx, with fake-indexeddb and an injected wasm binary).
+- **All business rules live in the domain layer.** Title validation and the `MAX_TITLE_LENGTH = 200` cap, newest-first ordering, XP amounts and level titles, cortisol thresholds and moods, and calendar math are pure functions unit-tested exhaustively with plain Vitest (UT-xx) - no React, no DOM, no mocks.
 - **Repositories and services are tested against a real database.** Unit tests run them against an actual in-memory sql.js database using the in-memory storage adapter, so SQL is exercised for real without a browser.
 - **Failure handling stays contained.** `createAppDatabase` rejects with a typed boot error that `AppContext` catches and turns into `bootError`; services return validation errors as strings; nothing in the UI path throws for expected failures.
 
@@ -257,7 +257,7 @@ shopback-todo/
 │   ├── app/
 │   │   └── AppContext.tsx         # AppProvider boots the database and restores the session; useApp
 │   ├── auth/
-│   │   ├── password.ts            # hashPassword/verifyPassword — PBKDF2-SHA256, 100000 iterations, per-user salt
+│   │   ├── password.ts            # hashPassword/verifyPassword - PBKDF2-SHA256, 100000 iterations, per-user salt
 │   │   ├── password.test.ts       # Unit tests via Web Crypto (UT-xx)
 │   │   ├── sessionStore.ts        # getSession/saveSession/clearSession under shopback-todo.session.v1
 │   │   └── sessionStore.test.ts   # Session round-trip and corrupted-value tests (UT-xx)
@@ -304,7 +304,7 @@ shopback-todo/
 │   │   └── userRepository.test.ts
 │   ├── App.tsx                    # Boot-error screen / AuthPage / Shell switch under AppProvider
 │   ├── App.test.tsx               # RTL integration: login, tasks, XP, leaderboard, calendar, mascot,
-│   │                              # onboarding — fake-indexeddb + injected wasm binary (IT-xx)
+│   │                              # onboarding - fake-indexeddb + injected wasm binary (IT-xx)
 │   ├── index.css                  # Tailwind v4 entry; brand token (red-orange accent)
 │   └── main.tsx                   # React 19 root
 ├── index.html
@@ -314,4 +314,4 @@ shopback-todo/
 └── vite.config.ts
 ```
 
-This structure mirrors the layers one-to-one: each directory under `src/` is a layer, unit tests sit next to the module they cover, and the two deliberate meeting points are `AppContext.tsx` (database + session + auth) and `useTodos.ts` (task mutations + re-query) — exactly where the layers are meant to meet.
+This structure mirrors the layers one-to-one: each directory under `src/` is a layer, unit tests sit next to the module they cover, and the two deliberate meeting points are `AppContext.tsx` (database + session + auth) and `useTodos.ts` (task mutations + re-query) - exactly where the layers are meant to meet.

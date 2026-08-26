@@ -67,6 +67,27 @@ describe('buildMonthGrid', () => {
     const grid = buildMonthGrid(2026, 8, NOW)
     expect(grid.flat().filter((d) => d.isToday)).toHaveLength(0)
   })
+
+  it('renders a Monday-starting 28-day February as exactly four full weeks', () => {
+    // February 2027 starts on a Monday and has 28 days.
+    const grid = buildMonthGrid(2027, 1, NOW)
+    expect(grid).toHaveLength(4)
+    expect(grid.flat().every((d) => d.inMonth)).toBe(true)
+  })
+
+  it('includes 29 February in a leap year', () => {
+    const grid = buildMonthGrid(2028, 1, NOW)
+    const days = grid.flat().filter((d) => d.inMonth)
+    expect(days).toHaveLength(29)
+  })
+
+  it('rolls over the year boundary from December to January', () => {
+    const grid = buildMonthGrid(2026, 11, NOW)
+    const lastWeek = grid[grid.length - 1]
+    const januaryDays = lastWeek.filter((d) => new Date(d.ts).getMonth() === 0)
+    expect(januaryDays.length).toBeGreaterThan(0)
+    expect(januaryDays.every((d) => !d.inMonth)).toBe(true)
+  })
 })
 
 describe('monthLabel', () => {

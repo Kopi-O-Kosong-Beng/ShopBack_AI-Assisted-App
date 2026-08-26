@@ -9,7 +9,7 @@
 Built for the ShopBack AI-Assisted App assessment.
 
 [![Live demo](https://img.shields.io/badge/Live_demo-shopback--todo.vercel.app-e8532f?style=flat-square)](https://shopback-todo.vercel.app)
-![Tests](https://img.shields.io/badge/tests-140_unit%2Fintegration_%2B_14_e2e-16a34a?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-189_unit%2Fintegration_%2B_14_e2e-16a34a?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-React_19_%2B_Vite-3178c6?style=flat-square)
 ![SQLite](https://img.shields.io/badge/SQLite-WebAssembly-044a64?style=flat-square)
 
@@ -31,7 +31,7 @@ The fastest way to see everything working, no setup needed:
    - Open the **Calendar** tab to see tasks on their due dates, and **Leaderboard** to see your ranking climb.
 4. **Refresh the page.** Everything survives: tasks, XP, and your session.
 
-Prefer running it locally? See [Getting started](#getting-started). Prefer proof over clicking? Run `npm test` for the 140-test suite.
+Prefer running it locally? See [Getting started](#getting-started). Prefer proof over clicking? Run `npm test` for the 189-test suite.
 
 ---
 
@@ -120,7 +120,7 @@ npx playwright install chromium
 
 ## Testing
 
-**140 unit and integration tests plus 14 end-to-end tests**, layered so each level catches what the others cannot. The full plan with per-use-case tables lives in [specs/06-test-plan.md](specs/06-test-plan.md).
+**189 unit and integration tests plus 14 end-to-end tests**, layered so each level catches what the others cannot. The full plan with per-use-case tables lives in [specs/06-test-plan.md](specs/06-test-plan.md).
 
 | Level | Where | Approach |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ npx playwright install chromium
 | End-to-end | `e2e/todo.spec.ts` | The real app in Chromium with real IndexedDB, including a genuine page reload to prove persistence and session restore. |
 
 ```bash
-npm test          # unit + integration
+npm test          # 189 unit + integration tests
 npm run test:e2e  # end-to-end
 ```
 

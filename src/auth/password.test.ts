@@ -26,4 +26,24 @@ describe('verifyPassword', () => {
     const { hash, salt } = await hashPassword('demo1234')
     expect(await verifyPassword('demo1235', salt, hash)).toBe(false)
   })
+
+  it('rejects the right password against a different user\'s salt', async () => {
+    const { hash } = await hashPassword('demo1234')
+    const other = await hashPassword('demo1234')
+    expect(await verifyPassword('demo1234', other.salt, hash)).toBe(false)
+  })
+
+  it('returns false instead of throwing for a truncated salt', async () => {
+    const { hash, salt } = await hashPassword('demo1234')
+    // Odd-length hex: a corrupted snapshot could hand this back.
+    await expect(verifyPassword('demo1234', salt.slice(0, -1), hash)).resolves.toBe(false)
+  })
+
+  it.each(['', 'zzzz', 'not hex!'])(
+    'returns false instead of throwing for malformed salt %j',
+    async (badSalt) => {
+      const { hash } = await hashPassword('demo1234')
+      await expect(verifyPassword('demo1234', badSalt, hash)).resolves.toBe(false)
+    },
+  )
 })

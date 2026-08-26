@@ -58,20 +58,20 @@ export function useTodos(
 
   const editTask = useCallback(
     async (id: string, title: string, dueDate: number | null): Promise<string | null> => {
-      const error = await editService(adb, id, title, dueDate)
+      const error = await editService(adb, userId, id, title, dueDate)
       if (error) return error
       reload()
       return null
     },
-    [adb, reload],
+    [adb, userId, reload],
   )
 
   const deleteTask = useCallback(
     async (id: string) => {
-      await deleteService(adb, id)
+      await deleteService(adb, userId, id)
       reload()
     },
-    [adb, reload],
+    [adb, userId, reload],
   )
 
   const clearCompletedTasks = useCallback(async () => {

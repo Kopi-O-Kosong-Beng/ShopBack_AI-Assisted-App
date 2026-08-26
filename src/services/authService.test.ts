@@ -33,9 +33,21 @@ describe('signup', () => {
     expect(result).toEqual({ ok: false, error: 'That username is already taken' })
   })
 
-  it('rejects usernames that are too short or have invalid characters', async () => {
-    expect((await signup(adb, { ...valid, username: 'ab' })).ok).toBe(false)
-    expect((await signup(adb, { ...valid, username: 'has space' })).ok).toBe(false)
+  it.each([
+    ['ab', false], // one below the minimum
+    ['abc', true], // exactly the minimum
+    ['a'.repeat(20), true], // exactly the maximum
+    ['a'.repeat(21), false], // one past the maximum
+    ['has space', false],
+    ['   ', false], // whitespace-only trims to empty
+    ['bob!', false],
+  ])('username %s is accepted: %s', async (username, ok) => {
+    expect((await signup(adb, { ...valid, username })).ok).toBe(ok)
+  })
+
+  it('trims the username so login finds it later', async () => {
+    expect((await signup(adb, { ...valid, username: '  bob  ' })).ok).toBe(true)
+    expect((await login(adb, { username: 'bob', password: valid.password })).ok).toBe(true)
   })
 
   it('rejects passwords shorter than 8 characters', async () => {
@@ -44,6 +56,19 @@ describe('signup', () => {
       ok: false,
       error: 'Password must be at least 8 characters',
     })
+  })
+
+  it('accepts a password of exactly 8 characters', async () => {
+    const result = await signup(adb, { ...valid, password: '12345678' })
+    expect(result.ok).toBe(true)
+  })
+
+  it('is not blocked by unreadable legacy data', async () => {
+    localStorage.setItem(LEGACY_STORAGE_KEY, 'complete garbage {')
+    const result = await signup(adb, valid)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(listByUser(adb.db, result.user.id)).toHaveLength(0)
   })
 
   it('rejects an unknown department', async () => {
@@ -77,6 +102,19 @@ describe('login', () => {
   it('rejects an unknown user with the same generic error', async () => {
     const result = await login(adb, { username: 'ghost', password: 'whatever1' })
     expect(result).toEqual({ ok: false, error: 'Invalid username or password' })
+  })
+
+  it('accepts a different casing and surrounding spaces of the username', async () => {
+    await signup(adb, valid)
+    const result = await login(adb, { username: ' ZHIFENG ', password: 'password123' })
+    expect(result.ok).toBe(true)
+  })
+
+  it('rejects login to seeded colleagues, who have no password', async () => {
+    for (const password of ['', 'anything123']) {
+      const result = await login(adb, { username: 'aisyah', password })
+      expect(result).toEqual({ ok: false, error: 'Invalid username or password' })
+    }
   })
 })
 

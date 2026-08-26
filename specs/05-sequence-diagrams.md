@@ -1,4 +1,4 @@
-# 05 — Sequence Diagrams
+# 05 - Sequence Diagrams
 
 This document shows the runtime interactions for the main use cases of the ShopBack To-Do app (v2). Every flow follows the same layered path: a UI component calls an action exposed by the hooks/context layer (`useApp` from `AppContext` for auth and onboarding, the `useTodos` hook for task mutations), which delegates to a service (`authService` or `todoService`); services combine pure domain functions with repository calls against the in-browser SQLite database (sql.js), and after every mutation the service persists the whole database as a binary snapshot into IndexedDB.
 
@@ -10,19 +10,19 @@ This document shows the runtime interactions for the main use cases of the ShopB
 | AuthPage / LoginForm / SignupForm | Auth components in `src/components/` |
 | AddTodoForm / TodoItem / TodosView | Task components in `src/components/` |
 | Shell / Leaderboard / OnboardingTour | Shell-level components in `src/components/` |
-| AppContext | `src/app/AppContext.tsx` — `AppProvider` boots the app; `useApp` exposes `adb`, `user`, auth actions, and `completeOnboarding` |
-| useTodos | `src/hooks/useTodos.ts` — task state for the logged-in user; delegates every mutation to `todoService` and re-queries via `todoSqlRepository.listByUser` afterwards |
-| AuthService | `src/services/authService.ts` — signup, login, demo login, legacy import |
-| TodoService | `src/services/todoService.ts` — task mutations, XP award, snapshot persistence |
-| Domain | Pure functions in `src/domain/` — `todo.ts`, `xp.ts`, `mascot.ts`, `calendar.ts` |
-| Password | `src/auth/password.ts` — PBKDF2-SHA256 hashing |
+| AppContext | `src/app/AppContext.tsx` - `AppProvider` boots the app; `useApp` exposes `adb`, `user`, auth actions, and `completeOnboarding` |
+| useTodos | `src/hooks/useTodos.ts` - task state for the logged-in user; delegates every mutation to `todoService` and re-queries via `todoSqlRepository.listByUser` afterwards |
+| AuthService | `src/services/authService.ts` - signup, login, demo login, legacy import |
+| TodoService | `src/services/todoService.ts` - task mutations, XP award, snapshot persistence |
+| Domain | Pure functions in `src/domain/` - `todo.ts`, `xp.ts`, `mascot.ts`, `calendar.ts` |
+| Password | `src/auth/password.ts` - PBKDF2-SHA256 hashing |
 | WebCrypto | Browser Web Crypto API used by Password |
-| SessionStore | `src/auth/sessionStore.ts` — localStorage key `shopback-todo.session.v1` |
-| UserRepo | `src/storage/userRepository.ts` — SQL access to the `users` table |
-| TodoRepo | `src/storage/todoSqlRepository.ts` — SQL access to the `todos` table |
-| AppDatabase | `src/db/database.ts` — sql.js SQLite database with `persist` and `close` |
+| SessionStore | `src/auth/sessionStore.ts` - localStorage key `shopback-todo.session.v1` |
+| UserRepo | `src/storage/userRepository.ts` - SQL access to the `users` table |
+| TodoRepo | `src/storage/todoSqlRepository.ts` - SQL access to the `todos` table |
+| AppDatabase | `src/db/database.ts` - sql.js SQLite database with `persist` and `close` |
 | IndexedDB | Browser IndexedDB holding the binary database snapshot |
-| localStorage | Browser localStorage — the session key and the legacy v1 task key `shopback-todo.v1` |
+| localStorage | Browser localStorage - the session key and the legacy v1 task key `shopback-todo.v1` |
 
 Three conventions apply throughout:
 
@@ -32,7 +32,7 @@ Three conventions apply throughout:
 
 ---
 
-## UC-05 Persist and restore tasks — startup
+## UC-05 Persist and restore tasks - startup
 
 On first paint, `AppProvider` boots the database and restores the session. `createAppDatabase` loads the sql.js WASM binary, asks the IndexedDB storage adapter for an existing snapshot, and either opens it and runs any pending migrations recorded in the `meta` table, or creates a fresh schema and seeds the demo account plus 7 demo colleagues. A stored session then decides whether the user lands in the Shell or on the AuthPage.
 
@@ -77,7 +77,7 @@ sequenceDiagram
     end
 ```
 
-## UC-01 Add task — happy path
+## UC-01 Add task - happy path
 
 The user types a title, optionally picks a due date, and submits. The service validates and trims the title, builds a new `Todo` with `xpAwarded` false, inserts it for the current user, and persists the snapshot. The newest task appears on top.
 
@@ -110,9 +110,9 @@ sequenceDiagram
     Form->>Form: clear inputs, newest task on top with due badge
 ```
 
-## UC-01 Add task — validation error path
+## UC-01 Add task - validation error path
 
-Submitting an empty or whitespace-only title is rejected before any write; the same path applies to titles over 200 characters with a different message. The repository, database, and IndexedDB lifelines stay idle — nothing is saved.
+Submitting an empty or whitespace-only title is rejected before any write; the same path applies to titles over 200 characters with a different message. The repository, database, and IndexedDB lifelines stay idle - nothing is saved.
 
 ```mermaid
 sequenceDiagram
@@ -182,7 +182,7 @@ sequenceDiagram
 
 ## UC-03 Delete task
 
-Deletion is immediate by design — no confirmation dialog and no undo. The row is removed from the `todos` table and the snapshot persisted. XP already earned from the task is kept, because XP lives on the user row, not the task.
+Deletion is immediate by design - no confirmation dialog and no undo. The row is removed from the `todos` table and the snapshot persisted. XP already earned from the task is kept, because XP lives on the user row, not the task.
 
 ```mermaid
 sequenceDiagram
@@ -208,7 +208,7 @@ UC-07 Clear completed tasks follows this exact pattern with `clearCompletedTasks
 
 ## UC-04 Mark task complete / incomplete and UC-10 Earn XP and level up
 
-Clicking the checkbox flips `completed` through `setCompleted`. Completing a task for the first time awards `COMPLETION_XP` 10, plus `ON_TIME_BONUS_XP` 5 when the task has a due date and is completed on or before the end of that day — `completionXp` in `src/domain/xp.ts` decides the amount. The `xpAwarded` flag guarantees XP is granted at most once per task: un-ticking keeps the XP and re-ticking awards nothing.
+Clicking the checkbox flips `completed` through `setCompleted`. Completing a task for the first time awards `COMPLETION_XP` 10, plus `ON_TIME_BONUS_XP` 5 when the task has a due date and is completed on or before the end of that day - `completionXp` in `src/domain/xp.ts` decides the amount. The `xpAwarded` flag guarantees XP is granted at most once per task: un-ticking keeps the XP and re-ticking awards nothing.
 
 ```mermaid
 sequenceDiagram
@@ -330,7 +330,7 @@ sequenceDiagram
     Note over Auth,Sess: login is read only against the database, no snapshot persist
 ```
 
-Logging out clears only the session — the database and its snapshot are untouched, so the account and its tasks are still there on the next login.
+Logging out clears only the session - the database and its snapshot are untouched, so the account and its tasks are still there on the next login.
 
 ```mermaid
 sequenceDiagram
@@ -348,7 +348,7 @@ sequenceDiagram
 
 ## UC-11 View the leaderboard
 
-The Leaderboard tab is a pure read. `listLeaderboard` returns every user ordered by XP descending, then domain functions apply competition ranking — tied XP shares a rank and the next rank is skipped — and map XP to level titles. The current user's row is highlighted and the UI notes that the seeded rows are demo colleagues.
+The Leaderboard tab is a pure read. `listLeaderboard` returns every user ordered by XP descending, then domain functions apply competition ranking - tied XP shares a rank and the next rank is skipped - and map XP to level titles. The current user's row is highlighted and the UI notes that the seeded rows are demo colleagues.
 
 ```mermaid
 sequenceDiagram
@@ -376,7 +376,7 @@ sequenceDiagram
 
 ## UC-14 First-time onboarding tour
 
-After login or signup, the Shell opens the 4-step tour when the user's `has_seen_onboarding` flag is 0. The steps cover tasks and due dates, XP and the leaderboard, Kapi and cortisol, and the calendar. Finishing or skipping calls `completeOnboarding`, which sets the flag in the `users` table and persists — so the tour never auto-opens again for that account. The header help button reopens it anytime without writing.
+After login or signup, the Shell opens the 4-step tour when the user's `has_seen_onboarding` flag is 0. The steps cover tasks and due dates, XP and the leaderboard, Kapi and cortisol, and the calendar. Finishing or skipping calls `completeOnboarding`, which sets the flag in the `users` table and persists - so the tour never auto-opens again for that account. The header help button reopens it anytime without writing.
 
 ```mermaid
 sequenceDiagram
@@ -415,7 +415,7 @@ sequenceDiagram
 
 The remaining use cases are render-time derivations or reuse a pattern shown above, so a separate diagram would add no new interaction:
 
-- **UC-06 Filter tasks** — `filterTodos` runs purely at render over the in-memory list; no service, repository, or persist call is involved.
-- **UC-07 Clear completed tasks** — `clearCompletedTasks` follows the UC-03 mutation pattern with a single bulk delete, then persists.
-- **UC-12 Assign due dates and view the calendar** — assigning a due date is part of UC-01 and UC-02; the due badges via `dueBadge` and the Monday-start month grid via `buildMonthGrid`, `monthLabel`, and `todosOn` are pure calendar-domain derivations computed at render.
-- **UC-13 Mascot reacts to task load** — after every state refresh the Mascot component recomputes `cortisolLevel` from active and overdue counts, maps it through `moodForCortisol`, and renders the matching expression, message, and CortisolBar; nothing is stored.
+- **UC-06 Filter tasks** - `filterTodos` runs purely at render over the in-memory list; no service, repository, or persist call is involved.
+- **UC-07 Clear completed tasks** - `clearCompletedTasks` follows the UC-03 mutation pattern with a single bulk delete, then persists.
+- **UC-12 Assign due dates and view the calendar** - assigning a due date is part of UC-01 and UC-02; the due badges via `dueBadge` and the Monday-start month grid via `buildMonthGrid`, `monthLabel`, and `todosOn` are pure calendar-domain derivations computed at render.
+- **UC-13 Mascot reacts to task load** - after every state refresh the Mascot component recomputes `cortisolLevel` from active and overdue counts, maps it through `moodForCortisol`, and renders the matching expression, message, and CortisolBar; nothing is stored.

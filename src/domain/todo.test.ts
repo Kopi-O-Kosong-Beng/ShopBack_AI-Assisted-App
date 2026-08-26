@@ -51,6 +51,11 @@ describe('validateTitle', () => {
     const result = validateTitle('a'.repeat(MAX_TITLE_LENGTH + 1))
     expect(result.ok).toBe(false)
   })
+
+  it('trims before measuring length, so padded max-length titles pass', () => {
+    const result = validateTitle(`  ${'a'.repeat(MAX_TITLE_LENGTH)}  `)
+    expect(result.ok).toBe(true)
+  })
 })
 
 describe('createTodo', () => {
