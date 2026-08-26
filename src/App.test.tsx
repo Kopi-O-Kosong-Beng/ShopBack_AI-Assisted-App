@@ -209,6 +209,18 @@ describe('XP (UC-04, UC-10)', () => {
     await user.click(checkbox) // complete again, no XP
     expect(screen.getAllByText(/55 xp/i).length).toBeGreaterThan(0)
   })
+
+  it('explains why re-completing a task earns nothing', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await loginAsDemo(user)
+    const checkbox = screen.getByRole('checkbox', { name: /plan team lunch/i })
+    await user.click(checkbox)
+    await screen.findByText('+10 XP')
+    await user.click(checkbox)
+    await user.click(checkbox)
+    expect(await screen.findByText(/xp already earned for this task/i)).toBeInTheDocument()
+  })
 })
 
 describe('leaderboard (UC-11)', () => {
@@ -275,6 +287,50 @@ describe('mascot (UC-13)', () => {
     expect(bar).toHaveAttribute('aria-valuenow', '0')
     await addTask(user, 'Stress source')
     expect(bar).toHaveAttribute('aria-valuenow', '8')
+  })
+})
+
+describe('toast notifications', () => {
+  it('confirms adding, editing, deleting and clearing tasks', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await signupFresh(user)
+    await skipTourIfShown(user)
+
+    await addTask(user, 'Toast me')
+    expect(await screen.findByText(/task added/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /edit "toast me"/i }))
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+    expect(await screen.findByText(/task updated/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /delete "toast me"/i }))
+    expect(await screen.findByText(/task deleted/i)).toBeInTheDocument()
+  })
+
+  it('confirms logging in and out', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await user.click(screen.getByRole('button', { name: /try the demo account/i }))
+    await screen.findByRole('tab', { name: /tasks/i })
+    expect(await screen.findByText(/welcome back, demo/i)).toBeInTheDocument()
+    await skipTourIfShown(user)
+
+    await user.click(screen.getByRole('button', { name: /log out/i }))
+    expect(await screen.findByText(/signed out/i)).toBeInTheDocument()
+  })
+
+  it('lets the user dismiss a toast', async () => {
+    const user = userEvent.setup()
+    await renderApp()
+    await signupFresh(user)
+    await skipTourIfShown(user)
+    await addTask(user, 'Dismiss me')
+    const toast = (await screen.findByText(/task added/i)).closest<HTMLElement>(
+      '[role="status"]',
+    )!
+    await user.click(within(toast).getByRole('button', { name: /dismiss notification/i }))
+    expect(screen.queryByText(/task added/i)).not.toBeInTheDocument()
   })
 })
 

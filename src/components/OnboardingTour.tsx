@@ -9,12 +9,12 @@ const STEPS = [
   {
     emoji: '⭐',
     title: 'Earn XP for finishing',
-    body: 'Every completed task earns 10 XP — finish on or before the due date for a 5 XP bonus. Level up from Window Shopper all the way to Rebate Royalty.',
+    body: 'Every completed task earns 10 XP, and finishing on or before the due date adds a 5 XP bonus. Level up from Window Shopper all the way to Rebate Royalty.',
   },
   {
     emoji: '🦫',
     title: 'Keep Kapi calm',
-    body: 'Kapi the capybara mirrors your workload. The more open and overdue tasks you have, the higher the cortisol bar climbs — clear tasks to keep Kapi zen.',
+    body: 'Kapi the capybara mirrors your workload. The more open and overdue tasks you have, the higher the cortisol bar climbs, so clear tasks to keep Kapi zen.',
   },
   {
     emoji: '📅',

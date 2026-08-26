@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useReadyApp } from '../app/appContext'
+import { useToast } from '../app/toastContext'
 import { useTodos } from '../hooks/useTodos'
 import { levelForXp, levelProgress, levelTitle } from '../domain/xp'
 import CalendarView from './CalendarView'
@@ -16,35 +17,47 @@ const TABS: [Tab, string][] = [
   ['leaderboard', 'Leaderboard'],
 ]
 
-function XpToast({ amount }: { amount: number }) {
-  return (
-    <div
-      role="status"
-      className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg"
-    >
-      +{amount} XP
-    </div>
-  )
-}
-
 export default function Shell() {
   const { adb, user, logout, refreshUser, completeOnboarding } = useReadyApp()
+  const toast = useToast()
   const [tab, setTab] = useState<Tab>('tasks')
-  const [xpToast, setXpToast] = useState<number | null>(null)
   const [tourOpen, setTourOpen] = useState(!user.hasSeenOnboarding)
   // Bumped each time the guide is reopened so the tour remounts at step 1.
   const [tourOpenCount, setTourOpenCount] = useState(0)
 
-  const todosApi = useTodos(adb, user.id, (gained) => {
-    refreshUser()
-    setXpToast(gained)
+  const todosApi = useTodos(adb, user.id, ({ xpGained, alreadyAwarded }) => {
+    if (xpGained > 0) {
+      refreshUser()
+      toast.show(`+${xpGained} XP`, 'info')
+    } else if (alreadyAwarded) {
+      // Explain the zero: XP is banked once per task so it cannot be farmed.
+      toast.show('XP already earned for this task', 'muted')
+    }
   })
 
-  useEffect(() => {
-    if (xpToast === null) return
-    const timer = setTimeout(() => setXpToast(null), 2200)
-    return () => clearTimeout(timer)
-  }, [xpToast])
+  async function handleAdd(title: string, dueDate: number | null) {
+    const error = await todosApi.addTask(title, dueDate)
+    // The form shows validation errors inline, so only success gets a toast.
+    if (!error) toast.show('Task added')
+    return error
+  }
+
+  async function handleEdit(id: string, title: string, dueDate: number | null) {
+    const error = await todosApi.editTask(id, title, dueDate)
+    if (!error) toast.show('Task updated')
+    return error
+  }
+
+  async function handleDelete(id: string) {
+    await todosApi.deleteTask(id)
+    toast.show('Task deleted')
+  }
+
+  async function handleClearCompleted() {
+    const cleared = todosApi.todos.filter((t) => t.completed).length
+    await todosApi.clearCompletedTasks()
+    toast.show(`Cleared ${cleared} completed ${cleared === 1 ? 'task' : 'tasks'}`)
+  }
 
   const level = levelForXp(user.xp)
   const progress = levelProgress(user.xp)
@@ -85,7 +98,10 @@ export default function Shell() {
             </button>
             <button
               type="button"
-              onClick={logout}
+              onClick={() => {
+                logout()
+                toast.show('Signed out. See you soon!', 'muted')
+              }}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
             >
               Log out
@@ -141,18 +157,17 @@ export default function Shell() {
             todos={todosApi.todos}
             filter={todosApi.filter}
             onFilterChange={todosApi.setFilter}
-            onAdd={todosApi.addTask}
+            onAdd={handleAdd}
             onToggle={todosApi.toggleTask}
-            onEdit={todosApi.editTask}
-            onDelete={todosApi.deleteTask}
-            onClearCompleted={todosApi.clearCompletedTasks}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onClearCompleted={handleClearCompleted}
           />
         )}
         {tab === 'calendar' && <CalendarView todos={todosApi.todos} />}
         {tab === 'leaderboard' && <Leaderboard />}
       </main>
 
-      {xpToast !== null && <XpToast amount={xpToast} />}
       {tourOpen && (
         <OnboardingTour
           key={tourOpenCount}

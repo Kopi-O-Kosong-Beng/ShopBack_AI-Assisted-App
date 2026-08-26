@@ -14,7 +14,16 @@ import { listByUser } from '../storage/todoSqlRepository'
  * Task state for one signed-in user. The SQLite database is the source of
  * truth: every action goes through the service layer, then re-queries.
  */
-export function useTodos(adb: AppDatabase, userId: string, onXp?: (gained: number) => void) {
+export interface ToggleFeedback {
+  xpGained: number
+  alreadyAwarded: boolean
+}
+
+export function useTodos(
+  adb: AppDatabase,
+  userId: string,
+  onToggleResult?: (feedback: ToggleFeedback) => void,
+) {
   const [todos, setTodos] = useState<Todo[]>(() => listByUser(adb.db, userId))
   const [filter, setFilter] = useState<Filter>('all')
 
@@ -40,11 +49,11 @@ export function useTodos(adb: AppDatabase, userId: string, onXp?: (gained: numbe
       setTodos((current) =>
         current.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
       )
-      const { xpGained } = await toggleService(adb, userId, id)
+      const { xpGained, completed, alreadyAwarded } = await toggleService(adb, userId, id)
       reload()
-      if (xpGained > 0) onXp?.(xpGained)
+      if (completed) onToggleResult?.({ xpGained, alreadyAwarded })
     },
-    [adb, userId, reload, onXp],
+    [adb, userId, reload, onToggleResult],
   )
 
   const editTask = useCallback(

@@ -54,7 +54,7 @@ export default function Leaderboard() {
         </table>
       </div>
       <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-400">
-        Complete tasks to earn XP — on-time finishes earn a bonus. Includes demo
+        Complete tasks to earn XP, and finish on time for a bonus. Includes demo
         colleagues so the board has some competition.
       </p>
     </section>

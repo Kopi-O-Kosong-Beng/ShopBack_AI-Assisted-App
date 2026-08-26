@@ -93,6 +93,15 @@ test('10 stressed mascot with a heavy task load', async ({ page }) => {
   await page.screenshot({ path: `${DIR}/10-mascot-stressed.png` })
 })
 
+test('12 toast notification', async ({ page }) => {
+  await loginDemo(page)
+  await dismissTour(page)
+  await page.getByLabel('New task').fill('Prepare sprint demo')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await page.getByText('Task added').waitFor()
+  await page.screenshot({ path: `${DIR}/12-toast-notification.png` })
+})
+
 test('11 mobile view', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 840 })
   await loginDemo(page)

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useApp } from '../app/appContext'
+import { useToast } from '../app/toastContext'
 import { DEPARTMENTS } from '../domain/user'
 import Logo from './Logo'
 
@@ -9,6 +10,7 @@ const labelClass = 'mb-1.5 block text-sm font-medium text-slate-600'
 
 function LoginForm() {
   const { login } = useApp()
+  const toast = useToast()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +21,10 @@ function LoginForm() {
     setBusy(true)
     const failure = await login({ username, password })
     setBusy(false)
+    // Validation errors stay inline next to the field; a toast saying the same
+    // thing is just noise. Toasts are for outcomes you navigate away from.
     if (failure) setError(failure)
+    else toast.show(`Welcome back, ${username.trim()}!`)
   }
 
   return (
@@ -68,6 +73,7 @@ function LoginForm() {
 
 function SignupForm() {
   const { signup } = useApp()
+  const toast = useToast()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [department, setDepartment] = useState<string>(DEPARTMENTS[0])
@@ -80,6 +86,7 @@ function SignupForm() {
     const failure = await signup({ username, password, department })
     setBusy(false)
     if (failure) setError(failure)
+    else toast.show(`Welcome aboard, ${username.trim()}!`)
   }
 
   return (
@@ -146,8 +153,16 @@ function SignupForm() {
 
 export default function AuthPage() {
   const { loginDemo } = useApp()
+  const toast = useToast()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [demoError, setDemoError] = useState<string | null>(null)
+
+  async function handleDemo() {
+    const failure = await loginDemo()
+    setDemoError(failure)
+    if (failure) toast.show(failure, 'error')
+    else toast.show('Welcome back, demo!')
+  }
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
@@ -192,7 +207,7 @@ export default function AuthPage() {
         <div className="mt-5 border-t border-slate-100 pt-4 text-center">
           <button
             type="button"
-            onClick={async () => setDemoError(await loginDemo())}
+            onClick={handleDemo}
             className="w-full rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 font-medium text-brand-700 transition hover:bg-brand-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
           >
             Try the demo account
@@ -209,7 +224,7 @@ export default function AuthPage() {
       </section>
 
       <p className="mt-4 text-center text-xs text-slate-400">
-        Accounts live in this browser only — the database is SQLite running locally via
+        Accounts live in this browser only. The database is SQLite running locally via
         WebAssembly.
       </p>
     </main>

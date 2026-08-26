@@ -84,6 +84,20 @@ describe('toggleTask and XP', () => {
     expect(again.xpGained).toBe(0)
     expect(findById(adb.db, 'u-1')?.xp).toBe(COMPLETION_XP)
   })
+
+  it('reports when a re-completed task had already earned its XP', async () => {
+    await addTask(adb, 'u-1', 'Task', null, NOW)
+    const [todo] = listByUser(adb.db, 'u-1')
+
+    const first = await toggleTask(adb, 'u-1', todo.id, NOW)
+    expect(first).toMatchObject({ completed: true, alreadyAwarded: false })
+
+    const undo = await toggleTask(adb, 'u-1', todo.id, NOW)
+    expect(undo).toMatchObject({ completed: false, alreadyAwarded: false })
+
+    const redo = await toggleTask(adb, 'u-1', todo.id, NOW)
+    expect(redo).toMatchObject({ xpGained: 0, completed: true, alreadyAwarded: true })
+  })
 })
 
 describe('editTask', () => {

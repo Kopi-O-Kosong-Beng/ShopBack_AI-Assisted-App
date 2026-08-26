@@ -1,0 +1,14 @@
+{
+  "name": "ShopBack To-Do",
+  "short_name": "ShopBack To-Do",
+  "description": "A to-do list with XP, a leaderboard and one very chill capybara.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#e8532f",
+  "icons": [
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

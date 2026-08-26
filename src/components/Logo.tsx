@@ -1,6 +1,6 @@
 /**
- * The mark: a cashback return-loop that resolves into a to-do checkmark — one
- * continuous stroke, so "money coming back" and "task done" are the same gesture.
+ * The mark: a cashback return-loop that resolves into a to-do checkmark, drawn as
+ * one continuous stroke so "money coming back" and "task done" are the same gesture.
  * `animated` draws the stroke on once, used on the sign-in screen.
  */
 export default function Logo({

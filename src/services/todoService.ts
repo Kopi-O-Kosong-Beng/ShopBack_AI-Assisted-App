@@ -28,18 +28,27 @@ export async function addTask(
   return { error: null }
 }
 
+export interface ToggleResult {
+  xpGained: number
+  completed: boolean
+  /** True when completing a task that already banked its XP earlier. */
+  alreadyAwarded: boolean
+}
+
 /**
  * Flips completion. Completing a task awards XP exactly once in its lifetime:
  * the xpAwarded flag survives un-completing, so re-completing earns nothing.
+ * The caller gets alreadyAwarded so the UI can explain the zero instead of
+ * looking broken.
  */
 export async function toggleTask(
   adb: AppDatabase,
   userId: string,
   id: string,
   now: number = Date.now(),
-): Promise<{ xpGained: number }> {
+): Promise<ToggleResult> {
   const todo = listByUser(adb.db, userId).find((t) => t.id === id)
-  if (!todo) return { xpGained: 0 }
+  if (!todo) return { xpGained: 0, completed: false, alreadyAwarded: false }
 
   const completing = !todo.completed
   setCompleted(adb.db, id, completing)
@@ -53,7 +62,11 @@ export async function toggleTask(
     }
   }
   await adb.persist()
-  return { xpGained }
+  return {
+    xpGained,
+    completed: completing,
+    alreadyAwarded: completing && todo.xpAwarded,
+  }
 }
 
 export async function editTask(

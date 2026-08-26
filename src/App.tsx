@@ -1,5 +1,6 @@
 import { AppProvider } from './app/AppProvider'
 import { useApp } from './app/appContext'
+import { ToastProvider } from './app/ToastProvider'
 import AuthPage from './components/AuthPage'
 import Shell from './components/Shell'
 import { browserDatabase } from './db/browserDatabase'
@@ -41,8 +42,10 @@ export default function App({
   createDatabase?: () => Promise<{ adb: AppDatabase; loadError: boolean }>
 }) {
   return (
-    <AppProvider createDatabase={createDatabase}>
-      <Router />
-    </AppProvider>
+    <ToastProvider>
+      <AppProvider createDatabase={createDatabase}>
+        <Router />
+      </AppProvider>
+    </ToastProvider>
   )
 }
